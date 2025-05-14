@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { FileText, Server, FolderOpen, Play, History as HistoryIcon, MessageSquare } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
@@ -19,21 +20,45 @@ const Navbar = () => {
             </div>
             <div className="ml-10 flex items-center space-x-4">
               <Link 
-                to="/generate-tests" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/generate-tests')}`}
+                to="/project-management" 
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${isActive('/project-management')}`}
               >
+                <FolderOpen className="h-4 w-4" />
+                Proyectos
+              </Link>
+              <Link 
+                to="/api-management" 
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${isActive('/api-management')}`}
+              >
+                <Server className="h-4 w-4" />
+                APIs
+              </Link>
+              <Link 
+                to="/test-case-management" 
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${isActive('/test-case-management')}`}
+              >
+                <MessageSquare className="h-4 w-4" />
+                Casos de Prueba
+              </Link>
+              <Link 
+                to="/generate-tests" 
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${isActive('/generate-tests')}`}
+              >
+                <FileText className="h-4 w-4" />
                 Generar Tests
               </Link>
               <Link 
                 to="/execute-tests" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/execute-tests')}`}
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${isActive('/execute-tests')}`}
               >
+                <Play className="h-4 w-4" />
                 Ejecutar Tests
               </Link>
               <Link 
                 to="/history" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/history')}`}
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${isActive('/history')}`}
               >
+                <HistoryIcon className="h-4 w-4" />
                 Historial
               </Link>
             </div>

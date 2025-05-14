@@ -10,6 +10,9 @@ import GenerateTests from "./pages/GenerateTests";
 import ExecuteTests from "./pages/ExecuteTests";
 import History from "./pages/History";
 import Navbar from "./components/Navbar";
+import ProjectManagement from "./pages/ProjectManagement";
+import ApiManagement from "./pages/ApiManagement";
+import TestCaseManagement from "./pages/TestCaseManagement";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +30,9 @@ const App = () => (
               <Route path="/generate-tests" element={<GenerateTests />} />
               <Route path="/execute-tests" element={<ExecuteTests />} />
               <Route path="/history" element={<History />} />
+              <Route path="/project-management" element={<ProjectManagement />} />
+              <Route path="/api-management" element={<ApiManagement />} />
+              <Route path="/test-case-management" element={<TestCaseManagement />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
