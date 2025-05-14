@@ -1,5 +1,5 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,9 +8,12 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Play, Check, X, Circle, CircleAlert } from "lucide-react";
+import { useProject } from '../contexts/ProjectContext';
+import ProjectHeader from '../components/ProjectHeader';
 
 interface TestCase {
   id: string;
+  projectId: string;
   description: string;
   expected: string;
   status: 'pending' | 'success' | 'error' | 'running';
@@ -18,38 +21,58 @@ interface TestCase {
 }
 
 const ExecuteTests = () => {
+  const { activeProject } = useProject();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!activeProject) {
+      toast.warning('Selecciona un proyecto para ejecutar pruebas');
+      navigate('/project-management');
+    }
+  }, [activeProject, navigate]);
+
   const [testCases, setTestCases] = useState<TestCase[]>([
     {
       id: 'CT-001',
+      projectId: 'PRJ001',
       description: 'Verificar que el sistema permita el inicio de sesión con credenciales válidas',
       expected: 'El usuario debe ser redirigido al dashboard después de un inicio de sesión exitoso',
       status: 'pending',
     },
     {
       id: 'CT-002',
+      projectId: 'PRJ001',
       description: 'Comprobar que se muestre un mensaje de error cuando se ingresen credenciales inválidas',
       expected: 'Debe mostrarse un mensaje de error indicando que las credenciales son incorrectas',
       status: 'pending',
     },
     {
       id: 'CT-003',
+      projectId: 'PRJ001',
       description: 'Verificar que el sistema bloquee la cuenta después de 3 intentos fallidos de inicio de sesión',
       expected: 'La cuenta debe ser bloqueada temporalmente y mostrar un mensaje adecuado',
       status: 'pending',
     },
     {
       id: 'CT-004',
+      projectId: 'PRJ002',
       description: 'Comprobar que el tiempo de respuesta del inicio de sesión no exceda 1 segundo',
       expected: 'El tiempo de respuesta debe ser menor a 1 segundo en condiciones normales',
       status: 'pending',
     },
     {
       id: 'CT-005',
+      projectId: 'PRJ002',
       description: 'Verificar que el sistema mantenga la sesión activa durante el periodo configurado',
       expected: 'La sesión debe permanecer activa durante el tiempo configurado sin cerrar automáticamente',
       status: 'pending',
     },
   ]);
+  
+  // Filter test cases by active project
+  const filteredTestCases = activeProject 
+    ? testCases.filter(test => test.projectId === activeProject.id)
+    : [];
   
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -57,11 +80,16 @@ const ExecuteTests = () => {
   const [completedTests, setCompletedTests] = useState(0);
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
   
+  useEffect(() => {
+    // Reset selected tests when project changes
+    setSelectedTests([]);
+  }, [activeProject]);
+  
   const toggleSelectAll = () => {
-    if (selectedTests.length === testCases.length) {
+    if (selectedTests.length === filteredTestCases.length) {
       setSelectedTests([]);
     } else {
-      setSelectedTests(testCases.map(test => test.id));
+      setSelectedTests(filteredTestCases.map(test => test.id));
     }
   };
   
@@ -169,6 +197,10 @@ const ExecuteTests = () => {
     }
   };
 
+  if (!activeProject) {
+    return null;
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -178,11 +210,13 @@ const ExecuteTests = () => {
         </p>
       </div>
       
+      <ProjectHeader />
+      
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-7">
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Casos de Prueba Disponibles</h2>
+              <h2 className="text-xl font-semibold">Casos de Prueba ({filteredTestCases.length})</h2>
               <Button 
                 onClick={runTests}
                 disabled={isRunning || selectedTests.length === 0}
@@ -193,50 +227,64 @@ const ExecuteTests = () => {
               </Button>
             </div>
             
-            <div className="rounded-md border overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="p-2 text-left">
-                      <div className="flex items-center">
-                        <Checkbox
-                          checked={selectedTests.length === testCases.length && testCases.length > 0}
-                          onCheckedChange={toggleSelectAll}
-                          className="mr-2"
-                        />
-                        <span>Seleccionar</span>
-                      </div>
-                    </th>
-                    <th className="p-2 text-left">ID</th>
-                    <th className="p-2 text-left">Descripción</th>
-                    <th className="p-2 text-left">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {testCases.map((test, index) => (
-                    <tr key={test.id} className={index % 2 ? 'bg-muted/20' : ''}>
-                      <td className="p-2">
-                        <Checkbox
-                          checked={selectedTests.includes(test.id)}
-                          onCheckedChange={() => toggleTestSelection(test.id)}
-                          disabled={isRunning}
-                        />
-                      </td>
-                      <td className="p-2 font-medium">{test.id}</td>
-                      <td className="p-2">{test.description}</td>
-                      <td className="p-2">
+            {filteredTestCases.length > 0 ? (
+              <div className="rounded-md border overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="p-2 text-left">
                         <div className="flex items-center">
-                          {getStatusIcon(test.status)}
-                          <span className="ml-2 capitalize">
-                            {test.status === 'pending' ? '-' : test.status}
-                          </span>
+                          <Checkbox
+                            checked={selectedTests.length === filteredTestCases.length && filteredTestCases.length > 0}
+                            onCheckedChange={toggleSelectAll}
+                            className="mr-2"
+                          />
+                          <span>Seleccionar</span>
                         </div>
-                      </td>
+                      </th>
+                      <th className="p-2 text-left">ID</th>
+                      <th className="p-2 text-left">Descripción</th>
+                      <th className="p-2 text-left">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredTestCases.map((test, index) => (
+                      <tr key={test.id} className={index % 2 ? 'bg-muted/20' : ''}>
+                        <td className="p-2">
+                          <Checkbox
+                            checked={selectedTests.includes(test.id)}
+                            onCheckedChange={() => toggleTestSelection(test.id)}
+                            disabled={isRunning}
+                          />
+                        </td>
+                        <td className="p-2 font-medium">{test.id}</td>
+                        <td className="p-2">{test.description}</td>
+                        <td className="p-2">
+                          <div className="flex items-center">
+                            {getStatusIcon(test.status)}
+                            <span className="ml-2 capitalize">
+                              {test.status === 'pending' ? '-' : test.status}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 border rounded-md">
+                <p className="text-muted-foreground">No hay casos de prueba disponibles para este proyecto.</p>
+                <p className="text-sm mt-2">Primero debes generar casos de prueba en la sección correspondiente.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4" 
+                  onClick={() => navigate('/test-case-management')}
+                >
+                  Ir a Gestión de Casos de Prueba
+                </Button>
+              </div>
+            )}
 
             {isRunning && (
               <div className="mt-4 space-y-2">

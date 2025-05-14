@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { Plus, Edit, Trash, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Edit, Trash, FolderOpen } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +11,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from 'sonner';
+import { useProject } from '@/contexts/ProjectContext';
 
 const ProjectManagement = () => {
-  const [projects, setProjects] = useState([
-    { id: 'PRJ001', name: 'Proyecto de Autenticación', description: 'Pruebas del sistema de autenticación y autorización', createdAt: '2023-05-10', updatedAt: '2023-05-12' },
-    { id: 'PRJ002', name: 'Proyecto de Pagos', description: 'Pruebas para el módulo de procesamiento de pagos', createdAt: '2023-05-11', updatedAt: '2023-05-11' },
-    { id: 'PRJ003', name: 'Proyecto API REST', description: 'Pruebas de endpoints para la API REST', createdAt: '2023-05-13', updatedAt: '2023-05-14' },
-  ]);
-
+  const navigate = useNavigate();
+  const { projects, addProject, updateProject, deleteProject, setActiveProject } = useProject();
+  
   const [newProject, setNewProject] = useState({ name: '', description: '' });
   const [editingProject, setEditingProject] = useState<null | { id: string, name: string, description: string }>(null);
 
@@ -25,17 +24,15 @@ const ProjectManagement = () => {
     const id = `PRJ${String(projects.length + 1).padStart(3, '0')}`;
     const now = new Date().toISOString().split('T')[0];
     
-    setProjects([
-      ...projects, 
-      { 
-        id, 
-        name: newProject.name, 
-        description: newProject.description, 
-        createdAt: now, 
-        updatedAt: now 
-      }
-    ]);
+    const project = { 
+      id, 
+      name: newProject.name, 
+      description: newProject.description, 
+      createdAt: now, 
+      updatedAt: now 
+    };
     
+    addProject(project);
     setNewProject({ name: '', description: '' });
     toast.success('Proyecto creado con éxito');
   };
@@ -43,24 +40,26 @@ const ProjectManagement = () => {
   const handleUpdateProject = () => {
     if (!editingProject) return;
     
-    setProjects(projects.map(project => 
-      project.id === editingProject.id 
-        ? { 
-            ...project, 
-            name: editingProject.name, 
-            description: editingProject.description,
-            updatedAt: new Date().toISOString().split('T')[0]
-          } 
-        : project
-    ));
+    const now = new Date().toISOString().split('T')[0];
+    const updatedProject = {
+      ...editingProject,
+      updatedAt: now
+    };
     
+    updateProject(updatedProject);
     setEditingProject(null);
     toast.success('Proyecto actualizado con éxito');
   };
 
   const handleDeleteProject = (id: string) => {
-    setProjects(projects.filter(project => project.id !== id));
+    deleteProject(id);
     toast.success('Proyecto eliminado con éxito');
+  };
+  
+  const handleSelectProject = (project: any) => {
+    setActiveProject(project);
+    navigate(`/project-dashboard/${project.id}`);
+    toast.success(`Proyecto "${project.name}" seleccionado`);
   };
 
   return (
@@ -141,6 +140,16 @@ const ProjectManagement = () => {
                   <TableCell>{project.updatedAt}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="flex items-center gap-1"
+                        onClick={() => handleSelectProject(project)}
+                      >
+                        <FolderOpen className="h-4 w-4" />
+                        Seleccionar
+                      </Button>
+                      
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button 
@@ -151,7 +160,8 @@ const ProjectManagement = () => {
                               id: project.id, 
                               name: project.name, 
                               description: project.description 
-                            })}>
+                            })}
+                          >
                             <Edit className="h-4 w-4" />
                             Editar
                           </Button>
@@ -194,7 +204,8 @@ const ProjectManagement = () => {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="flex items-center gap-1 text-destructive hover:text-destructive">
+                            className="flex items-center gap-1 text-destructive hover:text-destructive"
+                          >
                             <Trash className="h-4 w-4" />
                             Eliminar
                           </Button>
@@ -210,7 +221,8 @@ const ProjectManagement = () => {
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             <AlertDialogAction 
                               onClick={() => handleDeleteProject(project.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
                               Eliminar
                             </AlertDialogAction>
                           </AlertDialogFooter>

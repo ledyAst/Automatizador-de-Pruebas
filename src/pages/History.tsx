@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Download, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from 'sonner';
+import { useProject } from '../contexts/ProjectContext';
+import ProjectHeader from '../components/ProjectHeader';
 
 const History = () => {
+  const { activeProject } = useProject();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!activeProject) {
+      toast.warning('Selecciona un proyecto para ver su historial');
+      navigate('/project-management');
+    }
+  }, [activeProject, navigate]);
+
   const [filter, setFilter] = useState({
     searchTerm: '',
     interactionType: 'all',
@@ -20,6 +33,7 @@ const History = () => {
 
   const [selectedInteraction, setSelectedInteraction] = useState<null | {
     id: string;
+    projectId: string;
     date: string;
     type: string;
     prompt: string;
@@ -30,6 +44,7 @@ const History = () => {
   const mockHistoryData = [
     {
       id: 'INT001',
+      projectId: 'PRJ001',
       date: '2023-05-14T10:30:00',
       type: 'Generación',
       prompt: 'Generar casos de prueba para autenticación de usuario',
@@ -37,6 +52,7 @@ const History = () => {
     },
     {
       id: 'INT002',
+      projectId: 'PRJ002',
       date: '2023-05-13T15:45:00',
       type: 'Ejecución',
       prompt: 'Ejecutar casos de prueba del módulo de pagos',
@@ -44,6 +60,7 @@ const History = () => {
     },
     {
       id: 'INT003',
+      projectId: 'PRJ003',
       date: '2023-05-12T09:15:00',
       type: 'Generación',
       prompt: 'Generar casos de prueba para recuperación de contraseña',
@@ -51,6 +68,7 @@ const History = () => {
     },
     {
       id: 'INT004',
+      projectId: 'PRJ001',
       date: '2023-05-10T14:20:00',
       type: 'Ejecución',
       prompt: 'Ejecutar casos de prueba del módulo de registro',
@@ -58,6 +76,7 @@ const History = () => {
     },
     {
       id: 'INT005',
+      projectId: 'PRJ001',
       date: '2023-05-08T11:45:00',
       type: 'Generación',
       prompt: 'Generar casos de prueba para cierre de sesión',
@@ -65,8 +84,13 @@ const History = () => {
     },
   ];
 
+  // First filter by project, then apply other filters
+  const projectHistory = activeProject 
+    ? mockHistoryData.filter(item => item.projectId === activeProject.id)
+    : [];
+
   // Filter the history data based on the filters
-  const filteredHistory = mockHistoryData.filter(item => {
+  const filteredHistory = projectHistory.filter(item => {
     const matchesSearch = item.prompt.toLowerCase().includes(filter.searchTerm.toLowerCase()) ||
                          item.response.toLowerCase().includes(filter.searchTerm.toLowerCase()) ||
                          item.id.toLowerCase().includes(filter.searchTerm.toLowerCase());
@@ -91,12 +115,18 @@ const History = () => {
     toast.success(`Historial exportado en formato ${format.toUpperCase()}`);
   };
 
+  if (!activeProject) {
+    return null;
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Historial de Interacciones</h1>
         <p className="text-muted-foreground">Consulta el historial detallado de interacciones con el agente inteligente</p>
       </div>
+
+      <ProjectHeader />
 
       <Card className="mb-6">
         <CardHeader>
@@ -149,7 +179,7 @@ const History = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Interacciones</CardTitle>
+            <CardTitle>Interacciones en {activeProject.name}</CardTitle>
             <CardDescription>
               {filteredHistory.length} interacciones encontradas
             </CardDescription>
@@ -194,7 +224,7 @@ const History = () => {
                         <DialogHeader>
                           <DialogTitle>Detalle de Interacción #{item.id}</DialogTitle>
                           <DialogDescription>
-                            {formatDate(item.date)} - {item.type}
+                            {formatDate(item.date)} - {item.type} - Proyecto: {activeProject.name}
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
@@ -212,6 +242,13 @@ const History = () => {
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredHistory.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <p className="text-muted-foreground">No se encontraron interacciones para este proyecto con los filtros aplicados.</p>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

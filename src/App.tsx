@@ -13,6 +13,8 @@ import Navbar from "./components/Navbar";
 import ProjectManagement from "./pages/ProjectManagement";
 import ApiManagement from "./pages/ApiManagement";
 import TestCaseManagement from "./pages/TestCaseManagement";
+import { ProjectProvider } from "./contexts/ProjectContext";
+import ProjectDashboard from "./pages/ProjectDashboard";
 
 const queryClient = new QueryClient();
 
@@ -22,21 +24,24 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/generate-tests" element={<GenerateTests />} />
-              <Route path="/execute-tests" element={<ExecuteTests />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/project-management" element={<ProjectManagement />} />
-              <Route path="/api-management" element={<ApiManagement />} />
-              <Route path="/test-case-management" element={<TestCaseManagement />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+        <ProjectProvider>
+          <div className="min-h-screen bg-background">
+            <Navbar />
+            <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/generate-tests" element={<GenerateTests />} />
+                <Route path="/execute-tests" element={<ExecuteTests />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/project-management" element={<ProjectManagement />} />
+                <Route path="/api-management" element={<ApiManagement />} />
+                <Route path="/test-case-management" element={<TestCaseManagement />} />
+                <Route path="/project-dashboard/:projectId" element={<ProjectDashboard />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
           </div>
-        </div>
+        </ProjectProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

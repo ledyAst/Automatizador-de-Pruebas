@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Upload, CheckCircle, XCircle, FileText, AlertTriangle, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,12 +10,24 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
+import { useProject } from '../contexts/ProjectContext';
+import ProjectHeader from '../components/ProjectHeader';
 
 const ApiManagement = () => {
+  const { activeProject } = useProject();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!activeProject) {
+      toast.warning('Selecciona un proyecto para gestionar APIs');
+      navigate('/project-management');
+    }
+  }, [activeProject, navigate]);
+
   const [apis, setApis] = useState([
-    { id: 'API001', name: 'User Authentication API', version: 'v1.0', endpoints: 12, status: 'valid' },
-    { id: 'API002', name: 'Payment Processing API', version: 'v2.1', endpoints: 8, status: 'warning' },
-    { id: 'API003', name: 'Product Catalog API', version: 'v1.5', endpoints: 15, status: 'valid' },
+    { id: 'API001', projectId: 'PRJ001', name: 'User Authentication API', version: 'v1.0', endpoints: 12, status: 'valid' },
+    { id: 'API002', projectId: 'PRJ002', name: 'Payment Processing API', version: 'v2.1', endpoints: 8, status: 'warning' },
+    { id: 'API003', projectId: 'PRJ003', name: 'Product Catalog API', version: 'v1.5', endpoints: 15, status: 'valid' },
   ]);
   
   const [uploadDetails, setUploadDetails] = useState({
@@ -31,6 +44,11 @@ const ApiManagement = () => {
     { id: 4, name: 'Validación de Seguridad', status: 'pending' },
   ]);
   
+  // Filter APIs by active project
+  const filteredApis = activeProject 
+    ? apis.filter(api => api.projectId === activeProject.id)
+    : [];
+  
   // Mock file selection handler
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,7 +63,7 @@ const ApiManagement = () => {
   
   // Mock upload and validation process
   const uploadAndValidateFile = () => {
-    if (!uploadDetails.file) return;
+    if (!uploadDetails.file || !activeProject) return;
     
     setUploadDetails({
       ...uploadDetails,
@@ -131,17 +149,16 @@ const ApiManagement = () => {
               
               // Add the new API to the list
               const newApiId = `API${String(apis.length + 1).padStart(3, '0')}`;
-              setApis([
-                ...apis,
-                { 
-                  id: newApiId, 
-                  name: uploadDetails.file.name.replace('.json', '').replace('.yaml', ''), 
-                  version: 'v1.0', 
-                  endpoints: 15, 
-                  status: 'warning' 
-                }
-              ]);
+              const newApi = { 
+                id: newApiId, 
+                projectId: activeProject.id,
+                name: uploadDetails.file.name.replace('.json', '').replace('.yaml', ''), 
+                version: 'v1.0', 
+                endpoints: 15, 
+                status: 'warning' 
+              };
               
+              setApis([...apis, newApi]);
               toast.success('API validada con advertencias menores');
               
             }, 1000);
@@ -196,12 +213,18 @@ const ApiManagement = () => {
     }
   };
 
+  if (!activeProject) {
+    return null;
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Carga y Validación de APIs</h1>
         <p className="text-muted-foreground">Carga y valida documentación de API en formato Swagger/OpenAPI</p>
       </div>
+
+      <ProjectHeader />
 
       <div className="flex justify-end mb-6">
         <Dialog>
@@ -215,7 +238,7 @@ const ApiManagement = () => {
             <DialogHeader>
               <DialogTitle>Cargar Documentación de API</DialogTitle>
               <DialogDescription>
-                Selecciona un archivo Swagger/OpenAPI en formato JSON o YAML.
+                Selecciona un archivo Swagger/OpenAPI en formato JSON o YAML para el proyecto "{activeProject.name}".
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -301,7 +324,7 @@ const ApiManagement = () => {
         <CardHeader>
           <CardTitle>APIs Cargadas</CardTitle>
           <CardDescription>
-            Lista de APIs cargadas y su estado de validación
+            APIs disponibles para el proyecto "{activeProject.name}"
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -317,7 +340,7 @@ const ApiManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {apis.map((api) => (
+              {filteredApis.map((api) => (
                 <TableRow key={api.id}>
                   <TableCell>{api.id}</TableCell>
                   <TableCell>{api.name}</TableCell>
@@ -331,6 +354,14 @@ const ApiManagement = () => {
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredApis.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <p className="text-muted-foreground">No hay APIs disponibles para este proyecto.</p>
+                    <p className="text-sm">Utiliza el botón "Cargar API" para añadir una nueva.</p>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
