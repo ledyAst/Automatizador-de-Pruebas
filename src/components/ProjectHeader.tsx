@@ -12,7 +12,7 @@ const ProjectHeader = () => {
 
   if (!activeProject) {
     return (
-      <Alert variant="warning" className="mb-6">
+      <Alert className="mb-6">
         <FolderOpen className="h-4 w-4" />
         <AlertTitle>No hay proyecto seleccionado</AlertTitle>
         <AlertDescription className="flex justify-between items-center">
