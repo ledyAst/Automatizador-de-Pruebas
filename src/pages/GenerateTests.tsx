@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { useProject } from '@/contexts/ProjectContext';
+import ProjectHeader from '@/components/ProjectHeader';
+import { useNavigate } from 'react-router-dom';
 
 // Form schema for the test generation form
 const formSchema = z.object({
@@ -41,6 +44,15 @@ const GenerateTests = () => {
     type: "Funcional" | "Rendimiento" | "Seguridad";
   }[]>([]);
   const [activeTab, setActiveTab] = useState("form");
+  const { activeProject } = useProject();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!activeProject) {
+      toast.warning('Selecciona un proyecto para generar casos de prueba');
+      navigate('/project-management');
+    }
+  }, [activeProject, navigate]);
 
   // Initialize the form
   const form = useForm<FormValues>({
@@ -117,12 +129,18 @@ const GenerateTests = () => {
     toast.success("Casos de prueba exportados correctamente");
   };
 
+  if (!activeProject) {
+    return null;
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Generar Casos de Prueba</h1>
         <p className="text-muted-foreground">Utiliza IA para generar casos de prueba automáticos a partir de descripciones funcionales</p>
       </div>
+
+      <ProjectHeader />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
