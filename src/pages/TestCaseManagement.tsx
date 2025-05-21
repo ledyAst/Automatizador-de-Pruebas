@@ -1,11 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, FileCheck, Edit, Trash, Check } from 'lucide-react';
+import { MessageSquare, FileCheck, Edit, Trash, Check, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -76,6 +77,7 @@ const TestCaseManagement = () => {
 
   const [editingTestCase, setEditingTestCase] = useState<any>(null);
   const [testCaseToDelete, setTestCaseToDelete] = useState<any>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   useEffect(() => {
     // Initialize conversation history when project changes
@@ -149,7 +151,11 @@ const TestCaseManagement = () => {
     }, 2000);
   };
 
-  const handleUpdateTestCase = () => {
+  const handleShowConfirmDialog = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmUpdate = () => {
     if (!editingTestCase) return;
     
     setTestCases(testCases.map(tc => 
@@ -157,7 +163,14 @@ const TestCaseManagement = () => {
     ));
     
     setEditingTestCase(null);
+    setShowConfirmDialog(false);
     toast.success('Caso de prueba actualizado');
+  };
+
+  const handleCancelUpdate = () => {
+    setShowConfirmDialog(false);
+    // Opcional: redirigir a la lista de casos de prueba
+    // navigate('/test-case-management');
   };
 
   const handleDeleteTestCase = () => {
@@ -355,10 +368,28 @@ const TestCaseManagement = () => {
                                 </div>
                               )}
                               <DialogFooter>
-                                <Button onClick={handleUpdateTestCase}>Guardar Cambios</Button>
+                                <Button onClick={handleShowConfirmDialog}>Guardar Cambios</Button>
                               </DialogFooter>
                             </DialogContent>
                           </Dialog>
+
+                          <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás seguro de que deseas editar el caso de prueba?</AlertDialogTitle>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={handleCancelUpdate} className="gap-2">
+                                  <X className="h-4 w-4" />
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction onClick={handleConfirmUpdate} className="gap-2">
+                                  <Check className="h-4 w-4" />
+                                  Confirmar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
 
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
