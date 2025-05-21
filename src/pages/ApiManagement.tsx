@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, CheckCircle, XCircle, FileText, AlertTriangle, Check } from 'lucide-react';
@@ -45,6 +44,7 @@ const ApiManagement = () => {
     uploading: false,
     progress: 0,
     validationResults: null as any | null,
+    fileError: null as string | null,
   });
   
   const [validationSteps, setValidationSteps] = useState([
@@ -60,16 +60,73 @@ const ApiManagement = () => {
     ? apis.filter(api => api.projectId === activeProject.id)
     : [];
   
-  // Mock file selection handler
+  // File selection handler with format validation
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      
+      // Check if file extension is valid
+      if (fileExtension !== 'json' && fileExtension !== 'yaml' && fileExtension !== 'yml') {
+        setUploadDetails({
+          ...uploadDetails,
+          file: null,
+          progress: 0,
+          validationResults: null,
+          fileError: 'Formato no soportado. Solo se permiten archivos JSON o YAML.'
+        });
+        toast.error('Formato de archivo no válido. Solo se permiten archivos JSON o YAML.');
+        return;
+      }
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadDetails({
+          ...uploadDetails,
+          file: null,
+          progress: 0,
+          validationResults: null,
+          fileError: 'El archivo es demasiado grande. El tamaño máximo permitido es 5MB.'
+        });
+        toast.error('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
+        return;
+      }
+      
+      // File is valid
       setUploadDetails({
         ...uploadDetails,
-        file: e.target.files[0],
+        file,
         progress: 0,
         validationResults: null,
+        fileError: null,
       });
     }
+  };
+  
+  // Basic content validation for JSON files
+  const validateFileContent = async (file: File): Promise<boolean> => {
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (fileExtension === 'json') {
+      try {
+        const text = await file.text();
+        JSON.parse(text); // Try to parse as JSON
+        return true;
+      } catch (error) {
+        toast.error('El archivo JSON no tiene un formato válido.');
+        setUploadDetails(prev => ({
+          ...prev,
+          fileError: 'El archivo JSON no tiene un formato válido.',
+          uploading: false,
+          progress: 0
+        }));
+        return false;
+      }
+    }
+    
+    // For YAML files we'll assume they're valid for now
+    // In a real implementation, you'd validate YAML structure too
+    return true;
   };
   
   // MCP validation function
@@ -109,14 +166,21 @@ const ApiManagement = () => {
     }
   };
   
-  // Mock upload and validation process
-  const uploadAndValidateFile = () => {
+  // Upload and validation process
+  const uploadAndValidateFile = async () => {
     if (!uploadDetails.file || !activeProject) return;
+    
+    // First validate file content
+    const isContentValid = await validateFileContent(uploadDetails.file);
+    if (!isContentValid) {
+      return;
+    }
     
     setUploadDetails({
       ...uploadDetails,
       uploading: true,
       progress: 0,
+      fileError: null,
     });
     
     // Reset validation steps
@@ -142,6 +206,8 @@ const ApiManagement = () => {
         steps.map(step => step.id === 1 ? { ...step, status: 'processing' } : step)
       );
       
+      // Continue with the existing validation process
+      // ... keep existing code (validation steps)
       setTimeout(() => {
         setValidationSteps(steps => 
           steps.map(step => step.id === 1 ? { ...step, status: 'success' } : step)
@@ -340,7 +406,14 @@ const ApiManagement = () => {
                 <p className="text-xs text-muted-foreground">Formatos soportados: JSON, YAML</p>
               </div>
               
-              {uploadDetails.file && (
+              {uploadDetails.fileError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-md text-sm">
+                  <p className="font-medium">Error de formato:</p>
+                  <p>{uploadDetails.fileError}</p>
+                </div>
+              )}
+              
+              {uploadDetails.file && !uploadDetails.fileError && (
                 <div className="mt-2">
                   <p className="text-sm font-medium">Archivo seleccionado:</p>
                   <p className="text-sm text-muted-foreground">{uploadDetails.file.name} ({Math.round(uploadDetails.file.size / 1024)} KB)</p>
@@ -386,6 +459,8 @@ const ApiManagement = () => {
                     <div key={index} className="flex items-start gap-2">
                       {detail.type === 'warning' ? (
                         <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                      ) : detail.type === 'error' ? (
+                        <XCircle className="h-4 w-4 text-red-600 mt-0.5" />
                       ) : (
                         <FileText className="h-4 w-4 text-blue-600 mt-0.5" />
                       )}
@@ -398,7 +473,7 @@ const ApiManagement = () => {
             <DialogFooter>
               <Button 
                 onClick={uploadAndValidateFile} 
-                disabled={!uploadDetails.file || uploadDetails.uploading}
+                disabled={!uploadDetails.file || uploadDetails.uploading || !!uploadDetails.fileError}
               >
                 {uploadDetails.uploading ? 'Procesando...' : 'Cargar y Validar'}
               </Button>
