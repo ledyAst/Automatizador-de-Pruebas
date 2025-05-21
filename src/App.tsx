@@ -23,7 +23,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
+      <Sonner position="top-right" expand={true} closeButton={true} />
       <BrowserRouter>
         <ProjectProvider>
           <SidebarProvider>

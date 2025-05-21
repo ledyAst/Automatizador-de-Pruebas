@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -49,7 +48,9 @@ const GenerateTests = () => {
   
   useEffect(() => {
     if (!activeProject) {
-      toast.warning('Selecciona un proyecto para generar casos de prueba');
+      toast.warning('Selecciona un proyecto para generar casos de prueba', {
+        className: '!bg-amber-50 !border-amber-200 !text-amber-600',
+      });
       navigate('/project-management');
     }
   }, [activeProject, navigate]);
@@ -110,7 +111,9 @@ const GenerateTests = () => {
       setTestCases(mockTestCases);
       setIsGenerating(false);
       setActiveTab("results");
-      toast.success("Casos de prueba generados correctamente");
+      toast.success("Casos de prueba generados correctamente", {
+        className: '!bg-green-50 !border-green-200 !text-green-600',
+      });
     }, 2000);
   };
 
@@ -126,7 +129,9 @@ const GenerateTests = () => {
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
     
-    toast.success("Casos de prueba exportados correctamente");
+    toast.success("Casos de prueba exportados correctamente", {
+      className: '!bg-green-50 !border-green-200 !text-green-600',
+    });
   };
 
   if (!activeProject) {

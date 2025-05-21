@@ -13,6 +13,16 @@ import { toast } from 'sonner';
 import { useProject } from '../contexts/ProjectContext';
 import ProjectHeader from '../components/ProjectHeader';
 
+// Define the MCP validation criteria
+interface MCPRequirements {
+  name: boolean;
+  description: boolean;
+  method: boolean;
+  url: boolean;
+  headers: boolean;
+  body?: boolean;
+}
+
 const ApiManagement = () => {
   const { activeProject } = useProject();
   const navigate = useNavigate();
@@ -42,6 +52,7 @@ const ApiManagement = () => {
     { id: 2, name: 'Validación de Esquemas', status: 'pending' },
     { id: 3, name: 'Verificación de Endpoints', status: 'pending' },
     { id: 4, name: 'Validación de Seguridad', status: 'pending' },
+    { id: 5, name: 'Validación de Protocolo MCP', status: 'pending' },
   ]);
   
   // Filter APIs by active project
@@ -58,6 +69,43 @@ const ApiManagement = () => {
         progress: 0,
         validationResults: null,
       });
+    }
+  };
+  
+  // MCP validation function
+  const validateMCPProtocol = (): { isValid: boolean; errorCode?: string; details?: MCPRequirements } => {
+    // For simulation, alternate between success and error
+    const simulateRandomOutcome = Math.random() > 0.5;
+
+    if (simulateRandomOutcome) {
+      return {
+        isValid: true,
+        details: {
+          name: true,
+          description: true,
+          method: true,
+          url: true,
+          headers: true,
+          body: true
+        }
+      };
+    } else {
+      // Generate a random error code
+      const errorCodes = ['MCP001', 'MCP002', 'MCP003', 'MCP004'];
+      const errorCode = errorCodes[Math.floor(Math.random() * errorCodes.length)];
+      
+      return {
+        isValid: false,
+        errorCode,
+        details: {
+          name: true,
+          description: false,
+          method: true,
+          url: true, 
+          headers: Math.random() > 0.5, 
+          body: false
+        }
+      };
     }
   };
   
@@ -129,38 +177,77 @@ const ApiManagement = () => {
                 steps.map(step => step.id === 4 ? { ...step, status: 'success' } : step)
               );
               
-              // Validation complete
-              const validationResults = {
-                valid: true,
-                warnings: 2,
-                errors: 0,
-                details: [
-                  { type: 'warning', message: 'Faltan descripciones en 2 endpoints' },
-                  { type: 'info', message: 'Se detectaron 15 endpoints válidos' },
-                ]
-              };
+              // Fifth validation step (MCP Protocol)
+              setValidationSteps(steps => 
+                steps.map(step => step.id === 5 ? { ...step, status: 'processing' } : step)
+              );
               
-              setUploadDetails({
-                ...uploadDetails,
-                uploading: false,
-                progress: 100,
-                validationResults,
-              });
-              
-              // Add the new API to the list
-              const newApiId = `API${String(apis.length + 1).padStart(3, '0')}`;
-              const newApi = { 
-                id: newApiId, 
-                projectId: activeProject.id,
-                name: uploadDetails.file.name.replace('.json', '').replace('.yaml', ''), 
-                version: 'v1.0', 
-                endpoints: 15, 
-                status: 'warning' 
-              };
-              
-              setApis([...apis, newApi]);
-              toast.success('API validada con advertencias menores');
-              
+              setTimeout(() => {
+                // Validate against MCP protocol
+                const mcpValidation = validateMCPProtocol();
+                const mcpStatus = mcpValidation.isValid ? 'success' : 'error';
+                
+                setValidationSteps(steps => 
+                  steps.map(step => step.id === 5 ? { ...step, status: mcpStatus } : step)
+                );
+                
+                // Validation complete
+                let validationResults;
+                let apiStatus;
+                
+                if (mcpValidation.isValid) {
+                  validationResults = {
+                    valid: true,
+                    warnings: 2,
+                    errors: 0,
+                    details: [
+                      { type: 'warning', message: 'Faltan descripciones en 2 endpoints' },
+                      { type: 'info', message: 'Se detectaron 15 endpoints válidos' },
+                    ]
+                  };
+                  apiStatus = 'warning';
+                  
+                  // Show success toast
+                  toast.success('API validada correctamente');
+                } else {
+                  validationResults = {
+                    valid: false,
+                    warnings: 1,
+                    errors: 1,
+                    details: [
+                      { type: 'warning', message: 'Faltan descripciones en 2 endpoints' },
+                      { type: 'error', message: `Validación MCP fallida: ${mcpValidation.details?.description === false ? 'Falta descripción' : 'Error en formato'}` }
+                    ]
+                  };
+                  apiStatus = 'error';
+                  
+                  // Show error toast with format "Ocurrió un error [código]: por favor, intente nuevamente."
+                  toast.error(`Ocurrió un error [${mcpValidation.errorCode}]: por favor, intente nuevamente.`);
+                }
+                
+                setUploadDetails({
+                  ...uploadDetails,
+                  uploading: false,
+                  progress: 100,
+                  validationResults,
+                });
+                
+                if (mcpValidation.isValid) {
+                  // Add the new API to the list only if validation passed
+                  const newApiId = `API${String(apis.length + 1).padStart(3, '0')}`;
+                  const newApi = { 
+                    id: newApiId, 
+                    projectId: activeProject.id,
+                    name: uploadDetails.file.name.replace('.json', '').replace('.yaml', ''), 
+                    version: 'v1.0', 
+                    endpoints: 15, 
+                    status: apiStatus
+                  };
+                  
+                  setApis([...apis, newApi]);
+                }
+                
+              }, 1000);
             }, 1000);
           }, 1500);
         }, 1000);
