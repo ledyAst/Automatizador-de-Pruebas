@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Play, Check, X, Circle, CircleAlert } from "lucide-react";
+import { Play, Check, X, Circle, CircleAlert, Download } from "lucide-react";
 import { useProject } from '../contexts/ProjectContext';
 import ProjectHeader from '../components/ProjectHeader';
 
@@ -188,6 +189,37 @@ const ExecuteTests = () => {
     runNextTest();
   };
 
+  // New function to download test results
+  const downloadResults = () => {
+    // Simulate 30% chance of error
+    const isError = Math.random() < 0.3;
+    
+    if (isError) {
+      const errorCode = Math.floor(Math.random() * 9000) + 1000;
+      toast.error(`No se pudo completar la acción. Intente nuevamente. Error [${errorCode}].`);
+      return;
+    }
+    
+    // Add console log for successful download
+    setConsoleOutput(prev => [
+      ...prev,
+      `[${new Date().toLocaleTimeString()}] Descargando resultados de pruebas en formato Excel...`
+    ]);
+    
+    // Simulate successful download with toast
+    setTimeout(() => {
+      toast.success('Resultados descargados correctamente');
+      
+      // In a real application, this would trigger the actual file download
+      // For simulation purposes, we're just showing the success message
+      
+      setConsoleOutput(prev => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] Descarga completada: resultados_pruebas_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`
+      ]);
+    }, 1000);
+  };
+
   const getStatusIcon = (status: string) => {
     switch(status) {
       case 'success': return <Check className="h-5 w-5 text-green-500" />;
@@ -196,6 +228,9 @@ const ExecuteTests = () => {
       default: return <Circle className="h-5 w-5 text-gray-300" />;
     }
   };
+
+  // Check if there are any executed tests to enable download button
+  const hasExecutedTests = testCases.some(test => test.status !== 'pending');
 
   if (!activeProject) {
     return null;
@@ -300,7 +335,18 @@ const ExecuteTests = () => {
 
         <div className="lg:col-span-5">
           <Card className="p-6 h-full flex flex-col">
-            <h2 className="text-xl font-semibold mb-4">Resultados de Ejecución</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Resultados de Ejecución</h2>
+              <Button 
+                variant="download" 
+                onClick={downloadResults}
+                disabled={!hasExecutedTests}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Descargar Excel
+              </Button>
+            </div>
             
             <Tabs defaultValue="console" className="flex-1 flex flex-col">
               <TabsList className="mb-4">
