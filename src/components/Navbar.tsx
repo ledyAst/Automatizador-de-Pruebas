@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Server, FolderOpen, Play, History as HistoryIcon, MessageSquare, LayoutDashboard } from 'lucide-react';
+import { Server, FolderOpen, Play, History as HistoryIcon, MessageSquare, LayoutDashboard } from 'lucide-react';
 import { useProject } from '@/contexts/ProjectContext';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -57,13 +57,6 @@ const Navbar = () => {
               >
                 <MessageSquare className="h-4 w-4" />
                 Casos de Prueba
-              </Link>
-              <Link 
-                to="/generate-tests" 
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${isActive('/generate-tests')}`}
-              >
-                <FileText className="h-4 w-4" />
-                Generar Tests
               </Link>
               <Link 
                 to="/execute-tests" 

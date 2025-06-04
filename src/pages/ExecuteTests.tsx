@@ -189,14 +189,23 @@ const ExecuteTests = () => {
     runNextTest();
   };
 
-  // Updated function to download test results with error simulation
+  // Updated function to download test results in Excel format with project name
   const downloadResults = () => {
+    if (!activeProject) {
+      toast.error('No hay proyecto activo');
+      return;
+    }
+
     const { hasError, errorMessage } = simulateDownloadError();
     
     if (hasError) {
       toast.error(errorMessage);
       return;
     }
+    
+    // Clean project name for filename (remove special characters)
+    const cleanProjectName = activeProject.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `resultados_proyecto_${cleanProjectName}.xlsx`;
     
     // Add console log for successful download
     setConsoleOutput(prev => [
@@ -206,11 +215,11 @@ const ExecuteTests = () => {
     
     // Simulate successful download with toast
     setTimeout(() => {
-      toast.success('Resultados descargados correctamente');
+      toast.success('Resultados descargados correctamente en formato Excel');
       
       setConsoleOutput(prev => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] Descarga completada: resultados_pruebas_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`
+        `[${new Date().toLocaleTimeString()}] Descarga completada: ${fileName}`
       ]);
     }, 1000);
   };

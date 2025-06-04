@@ -3,14 +3,12 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useProject } from '@/contexts/ProjectContext';
 import { 
-  FileText, 
   Server, 
   FolderOpen, 
   Play, 
   History as HistoryIcon, 
   MessageSquare, 
-  LayoutDashboard,
-  PlusCircle
+  LayoutDashboard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -103,19 +101,6 @@ const AppSidebar = () => {
                   <Link to="/test-case-management">
                     <MessageSquare className="h-4 w-4" />
                     <span>Casos de Prueba</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={isActive('/generate-tests')}
-                  tooltip="Generar Tests"
-                  asChild
-                >
-                  <Link to="/generate-tests">
-                    <PlusCircle className="h-4 w-4" />
-                    <span>Generar Tests</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
