@@ -189,7 +189,7 @@ const ExecuteTests = () => {
     runNextTest();
   };
 
-  // Updated function to download test results in Excel format with project name
+  // Updated function to actually download an Excel file
   const downloadResults = () => {
     if (!activeProject) {
       toast.error('No hay proyecto activo');
@@ -207,13 +207,34 @@ const ExecuteTests = () => {
     const cleanProjectName = activeProject.name.replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `resultados_proyecto_${cleanProjectName}.xlsx`;
     
-    // Add console log for successful download
+    // Add console log for download start
     setConsoleOutput(prev => [
       ...prev,
       `[${new Date().toLocaleTimeString()}] Descargando resultados de pruebas en formato Excel...`
     ]);
     
-    // Simulate successful download with toast
+    // Create Excel-like content (CSV format that Excel can open)
+    const executedTests = testCases.filter(test => test.status !== 'pending');
+    
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "ID,Descripción,Resultado Esperado,Estado,Salida\n";
+    
+    executedTests.forEach(test => {
+      const status = test.status === 'success' ? 'Exitoso' : 'Fallido';
+      const output = test.output || '';
+      csvContent += `"${test.id}","${test.description}","${test.expected}","${status}","${output}"\n`;
+    });
+    
+    // Create and trigger download
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Show success message and update console
     setTimeout(() => {
       toast.success('Resultados descargados correctamente en formato Excel');
       

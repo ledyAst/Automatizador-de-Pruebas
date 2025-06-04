@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -36,8 +35,8 @@ const ProjectFormDialog = ({ open, onOpenChange, mode, project, onSubmit, existi
       return 'El nombre del proyecto es obligatorio';
     }
     
-    // Check for special characters (only letters, numbers, and spaces allowed)
-    if (!/^[a-zA-Z0-9\s]+$/.test(value)) {
+    // Allow letters (including accented), numbers, and spaces
+    if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(value)) {
       return 'El nombre no debe contener caracteres especiales (solo letras, números y espacios)';
     }
     

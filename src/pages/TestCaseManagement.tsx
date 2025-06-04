@@ -96,14 +96,14 @@ const TestCaseManagement = () => {
     ? testCases.filter(tc => tc.projectId === activeProject.id)
     : [];
 
-  // Validation functions for test cases
+  // Updated validation function to allow accented characters
   const validateTestCaseField = (value: string, fieldName: string): string | undefined => {
     if (!value.trim()) {
       return `${fieldName} es obligatorio`;
     }
     
-    // Check for special characters (only letters, numbers, and spaces allowed)
-    if (!/^[a-zA-Z0-9\s\.\,\;\:\!\?\-]+$/.test(value)) {
+    // Allow letters (including accented), numbers, spaces, and basic punctuation
+    if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\.\,\;\:\!\?\-]+$/.test(value)) {
       return `${fieldName} no debe contener caracteres especiales (solo letras, números, espacios y puntuación básica)`;
     }
     
