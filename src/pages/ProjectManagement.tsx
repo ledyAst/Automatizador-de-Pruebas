@@ -1,57 +1,72 @@
+
 import React, { useState } from 'react';
 import { useProject } from '@/contexts/ProjectContext';
 import { PlusCircle, Edit, Trash2, FolderOpen } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
+import ProjectFormDialog from '@/components/ProjectFormDialog';
+import ProjectConfirmDialog from '@/components/ProjectConfirmDialog';
 
 const ProjectManagement = () => {
   const { projects, addProject, updateProject, deleteProject, setActiveProject } = useProject();
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
+  const [pendingProjectData, setPendingProjectData] = useState<any>(null);
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
-  const [newProject, setNewProject] = useState({
-    name: '',
-    description: '',
-  });
   const navigate = useNavigate();
   
-  const handleAddProject = () => {
+  const handleCreateProject = (projectData: { name: string; description: string }) => {
     const today = new Date().toISOString().split('T')[0];
     const id = `PRJ${String(projects.length + 1).padStart(3, '0')}`;
     
     const project = {
       id,
-      name: newProject.name,
-      description: newProject.description,
+      name: projectData.name,
+      description: projectData.description,
       createdAt: today,
       updatedAt: today,
     };
     
     addProject(project);
-    setNewProject({ name: '', description: '' });
-    setOpenDialog(false);
+    setOpenCreateDialog(false);
     toast.success('Proyecto creado correctamente');
   };
-  
-  const handleUpdateProject = () => {
-    if (!editingProject) return;
+
+  const handleEditProject = (projectData: { name: string; description: string }) => {
+    setPendingProjectData(projectData);
+    setOpenConfirmDialog(true);
+    setOpenEditDialog(false);
+  };
+
+  const handleConfirmEdit = () => {
+    if (!editingProject || !pendingProjectData) return;
     
     const updatedProject = {
       ...editingProject,
+      name: pendingProjectData.name,
+      description: pendingProjectData.description,
       updatedAt: new Date().toISOString().split('T')[0],
     };
     
     updateProject(updatedProject);
     setEditingProject(null);
+    setPendingProjectData(null);
+    setOpenConfirmDialog(false);
     toast.success('Proyecto actualizado correctamente');
+  };
+
+  const handleCancelEdit = () => {
+    setOpenConfirmDialog(false);
+    setPendingProjectData(null);
+    setEditingProject(null);
+    navigate('/project-management');
   };
   
   const handleDeleteProject = () => {
@@ -68,6 +83,8 @@ const ProjectManagement = () => {
     toast.success(`Proyecto "${project.name}" seleccionado`);
   };
 
+  const existingProjectNames = projects.map(p => p.name);
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-8">
@@ -78,45 +95,10 @@ const ProjectManagement = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Proyectos</CardTitle>
-          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Nuevo Proyecto
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Crear Nuevo Proyecto</DialogTitle>
-                <DialogDescription>
-                  Completa el formulario para crear un nuevo proyecto.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Nombre</Label>
-                  <Input
-                    id="name"
-                    placeholder="Nombre del proyecto"
-                    value={newProject.name}
-                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Descripción</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Descripción del proyecto"
-                    value={newProject.description}
-                    onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleAddProject}>Crear Proyecto</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => setOpenCreateDialog(true)}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Nuevo Proyecto
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>
@@ -146,52 +128,18 @@ const ProjectManagement = () => {
                         Seleccionar
                       </Button>
 
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-1"
-                            onClick={() => setEditingProject({ ...project })}
-                          >
-                            <Edit className="h-4 w-4" />
-                            Editar
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-xl">
-                          <DialogHeader>
-                            <DialogTitle>Editar Proyecto</DialogTitle>
-                            <DialogDescription>
-                              Modifica los detalles del proyecto.
-                            </DialogDescription>
-                          </DialogHeader>
-                          {editingProject && (
-                            <div className="grid gap-4 py-4">
-                              <div className="grid gap-2">
-                                <Label htmlFor="name">Nombre</Label>
-                                <Input
-                                  id="name"
-                                  placeholder="Nombre del proyecto"
-                                  value={editingProject.name}
-                                  onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
-                                />
-                              </div>
-                              <div className="grid gap-2">
-                                <Label htmlFor="description">Descripción</Label>
-                                <Textarea
-                                  id="description"
-                                  placeholder="Descripción del proyecto"
-                                  value={editingProject.description}
-                                  onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                          )}
-                          <DialogFooter>
-                            <Button onClick={handleUpdateProject}>Guardar Cambios</Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1"
+                        onClick={() => {
+                          setEditingProject({ ...project });
+                          setOpenEditDialog(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                        Editar
+                      </Button>
 
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -235,6 +183,31 @@ const ProjectManagement = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <ProjectFormDialog
+        open={openCreateDialog}
+        onOpenChange={setOpenCreateDialog}
+        mode="create"
+        onSubmit={handleCreateProject}
+        existingNames={existingProjectNames}
+      />
+
+      <ProjectFormDialog
+        open={openEditDialog}
+        onOpenChange={setOpenEditDialog}
+        mode="edit"
+        project={editingProject}
+        onSubmit={handleEditProject}
+        existingNames={existingProjectNames.filter(name => name !== editingProject?.name)}
+      />
+
+      <ProjectConfirmDialog
+        open={openConfirmDialog}
+        onOpenChange={setOpenConfirmDialog}
+        onConfirm={handleConfirmEdit}
+        onCancel={handleCancelEdit}
+        projectName={editingProject?.name || ''}
+      />
     </div>
   );
 };
