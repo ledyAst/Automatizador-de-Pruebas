@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { toast } from "sonner";
 import { Play, Check, X, Circle, CircleAlert, Download } from "lucide-react";
 import { useProject } from '../contexts/ProjectContext';
 import ProjectHeader from '../components/ProjectHeader';
+import { simulateDownloadError } from '@/utils/errorSimulation';
 
 interface TestCase {
   id: string;
@@ -189,14 +189,12 @@ const ExecuteTests = () => {
     runNextTest();
   };
 
-  // New function to download test results
+  // Updated function to download test results with error simulation
   const downloadResults = () => {
-    // Simulate 30% chance of error
-    const isError = Math.random() < 0.3;
+    const { hasError, errorMessage } = simulateDownloadError();
     
-    if (isError) {
-      const errorCode = Math.floor(Math.random() * 9000) + 1000;
-      toast.error(`No se pudo completar la acción. Intente nuevamente. Error [${errorCode}].`);
+    if (hasError) {
+      toast.error(errorMessage);
       return;
     }
     
@@ -209,9 +207,6 @@ const ExecuteTests = () => {
     // Simulate successful download with toast
     setTimeout(() => {
       toast.success('Resultados descargados correctamente');
-      
-      // In a real application, this would trigger the actual file download
-      // For simulation purposes, we're just showing the success message
       
       setConsoleOutput(prev => [
         ...prev,
@@ -338,7 +333,7 @@ const ExecuteTests = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Resultados de Ejecución</h2>
               <Button 
-                variant="download" 
+                variant="outline" 
                 onClick={downloadResults}
                 disabled={!hasExecutedTests}
                 className="gap-2"
