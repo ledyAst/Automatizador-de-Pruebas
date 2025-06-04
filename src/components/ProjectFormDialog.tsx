@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,128 +10,140 @@ interface ProjectFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: 'create' | 'edit';
-  project?: {
-    id: string;
-    name: string;
-    description: string;
-  } | null;
-  onSubmit: (projectData: { name: string; description: string }) => void;
+  project?: any;
+  onSubmit: (data: { name: string; description: string }) => void;
   existingNames: string[];
 }
 
-const ProjectFormDialog = ({ 
-  open, 
-  onOpenChange, 
-  mode, 
-  project, 
-  onSubmit, 
-  existingNames 
-}: ProjectFormDialogProps) => {
-  const [formData, setFormData] = useState({
-    name: project?.name || '',
-    description: project?.description || '',
-  });
-  const [nameError, setNameError] = useState('');
+const ProjectFormDialog = ({ open, onOpenChange, mode, project, onSubmit, existingNames }: ProjectFormDialogProps) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; description?: string }>({});
 
-  const validateName = (name: string) => {
-    if (mode === 'create' && existingNames.includes(name.trim())) {
-      setNameError('Ese nombre ya existe');
-      return false;
+  useEffect(() => {
+    if (mode === 'edit' && project) {
+      setName(project.name);
+      setDescription(project.description);
+    } else {
+      setName('');
+      setDescription('');
     }
-    if (mode === 'edit' && existingNames.includes(name.trim()) && name.trim() !== project?.name) {
-      setNameError('Ese nombre ya existe');
-      return false;
+    setErrors({});
+  }, [mode, project, open]);
+
+  const validateName = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'El nombre del proyecto es obligatorio';
     }
-    setNameError('');
-    return true;
+    
+    // Check for special characters (only letters, numbers, and spaces allowed)
+    if (!/^[a-zA-Z0-9\s]+$/.test(value)) {
+      return 'El nombre no debe contener caracteres especiales (solo letras, números y espacios)';
+    }
+    
+    if (existingNames.includes(value.trim())) {
+      return 'Ese nombre ya existe';
+    }
+    
+    return undefined;
   };
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setFormData({ ...formData, name: newName });
-    if (nameError) {
-      validateName(newName);
+  const validateDescription = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'La descripción es obligatoria';
     }
+    return undefined;
   };
 
-  const handleSubmit = () => {
-    if (!validateName(formData.name)) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const nameError = validateName(name);
+    const descriptionError = validateDescription(description);
+    
+    if (nameError || descriptionError) {
+      setErrors({
+        name: nameError,
+        description: descriptionError
+      });
       return;
     }
     
-    if (!formData.name.trim()) {
-      setNameError('El nombre es requerido');
-      return;
-    }
-
-    onSubmit(formData);
-    setFormData({ name: '', description: '' });
-    setNameError('');
+    onSubmit({ name: name.trim(), description: description.trim() });
+    setErrors({});
   };
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setFormData({ name: '', description: '' });
-      setNameError('');
+  const handleNameChange = (value: string) => {
+    setName(value);
+    if (errors.name) {
+      const error = validateName(value);
+      setErrors(prev => ({ ...prev, name: error }));
     }
-    onOpenChange(newOpen);
   };
 
-  React.useEffect(() => {
-    if (project && mode === 'edit') {
-      setFormData({
-        name: project.name,
-        description: project.description,
-      });
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value);
+    if (errors.description) {
+      const error = validateDescription(value);
+      setErrors(prev => ({ ...prev, description: error }));
     }
-  }, [project, mode]);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-xl">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>
             {mode === 'create' ? 'Crear Nuevo Proyecto' : 'Editar Proyecto'}
           </DialogTitle>
           <DialogDescription>
             {mode === 'create' 
-              ? 'Completa el formulario para crear un nuevo proyecto.'
-              : 'Modifica los detalles del proyecto.'
-            }
+              ? 'Completa la información para crear un nuevo proyecto.' 
+              : 'Modifica la información del proyecto.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Nombre</Label>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="project-name">
+              Nombre del Proyecto <span className="text-red-500">*</span>
+            </Label>
             <Input
-              id="name"
-              placeholder="Nombre del proyecto"
-              value={formData.name}
-              onChange={handleNameChange}
-              className={nameError ? 'border-red-500' : ''}
+              id="project-name"
+              value={name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              className={errors.name ? 'border-red-500' : ''}
             />
-            {nameError && (
-              <p className="text-sm text-red-500">{nameError}</p>
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name}</p>
             )}
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="description">Descripción</Label>
+          
+          <div className="space-y-2">
+            <Label htmlFor="project-description">
+              Descripción <span className="text-red-500">*</span>
+            </Label>
             <Textarea
-              id="description"
-              placeholder="Descripción del proyecto"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              id="project-description"
+              value={description}
+              onChange={(e) => handleDescriptionChange(e.target.value)}
+              className={errors.description ? 'border-red-500' : ''}
+              rows={3}
             />
+            {errors.description && (
+              <p className="text-sm text-red-500">{errors.description}</p>
+            )}
           </div>
-        </div>
-        <DialogFooter>
-          <Button 
-            onClick={handleSubmit}
-            disabled={!!nameError || !formData.name.trim()}
-          >
-            {mode === 'create' ? 'Crear Proyecto' : 'Guardar Cambios'}
-          </Button>
-        </DialogFooter>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">
+              {mode === 'create' ? 'Crear Proyecto' : 'Guardar Cambios'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

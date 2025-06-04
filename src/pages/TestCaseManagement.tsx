@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, FileCheck, Edit, Trash, Check, X } from 'lucide-react';
@@ -78,6 +77,7 @@ const TestCaseManagement = () => {
   const [editingTestCase, setEditingTestCase] = useState<any>(null);
   const [testCaseToDelete, setTestCaseToDelete] = useState<any>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<any>({});
 
   useEffect(() => {
     // Initialize conversation history when project changes
@@ -95,6 +95,50 @@ const TestCaseManagement = () => {
   const filteredTestCases = activeProject 
     ? testCases.filter(tc => tc.projectId === activeProject.id)
     : [];
+
+  // Validation functions for test cases
+  const validateTestCaseField = (value: string, fieldName: string): string | undefined => {
+    if (!value.trim()) {
+      return `${fieldName} es obligatorio`;
+    }
+    
+    // Check for special characters (only letters, numbers, and spaces allowed)
+    if (!/^[a-zA-Z0-9\s\.\,\;\:\!\?\-]+$/.test(value)) {
+      return `${fieldName} no debe contener caracteres especiales (solo letras, números, espacios y puntuación básica)`;
+    }
+    
+    return undefined;
+  };
+
+  const validateTestCase = (testCase: any) => {
+    const errors: any = {};
+    
+    errors.description = validateTestCaseField(testCase.description, 'La descripción');
+    errors.expected = validateTestCaseField(testCase.expected, 'El resultado esperado');
+    
+    if (!testCase.steps || testCase.steps.length === 0 || testCase.steps.every((s: string) => !s.trim())) {
+      errors.steps = 'Los pasos son obligatorios';
+    } else {
+      // Validate each step
+      const stepErrors = testCase.steps.map((step: string, index: number) => 
+        validateTestCaseField(step, `El paso ${index + 1}`)
+      ).filter(Boolean);
+      
+      if (stepErrors.length > 0) {
+        errors.steps = stepErrors[0];
+      }
+    }
+    
+    if (!testCase.priority) {
+      errors.priority = 'La prioridad es obligatoria';
+    }
+    
+    if (!testCase.type) {
+      errors.type = 'El tipo es obligatorio';
+    }
+    
+    return errors;
+  };
 
   const handleSendPrompt = () => {
     if (!prompt.trim() || !activeProject) return;
@@ -152,6 +196,17 @@ const TestCaseManagement = () => {
   };
 
   const handleShowConfirmDialog = () => {
+    if (!editingTestCase) return;
+    
+    const errors = validateTestCase(editingTestCase);
+    const hasErrors = Object.values(errors).some(error => error);
+    
+    if (hasErrors) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setValidationErrors({});
     setShowConfirmDialog(true);
   };
 
@@ -164,13 +219,13 @@ const TestCaseManagement = () => {
     
     setEditingTestCase(null);
     setShowConfirmDialog(false);
+    setValidationErrors({});
     toast.success('Caso de prueba actualizado');
   };
 
   const handleCancelUpdate = () => {
     setShowConfirmDialog(false);
-    // Opcional: redirigir a la lista de casos de prueba
-    // navigate('/test-case-management');
+    setValidationErrors({});
   };
 
   const handleDeleteTestCase = () => {
@@ -179,6 +234,26 @@ const TestCaseManagement = () => {
     setTestCases(testCases.filter(tc => tc.id !== testCaseToDelete.id));
     setTestCaseToDelete(null);
     toast.success('Caso de prueba eliminado');
+  };
+
+  const getPriorityExplanation = (priority: string) => {
+    const explanations = {
+      'Alta': 'Este caso se ejecuta primero por su impacto crítico.',
+      'Media': 'Este caso tiene importancia moderada en el flujo de trabajo.',
+      'Baja': 'Este caso puede ejecutarse al final sin afectar funciones críticas.'
+    };
+    return explanations[priority as keyof typeof explanations] || '';
+  };
+
+  const getTypeExplanation = (type: string) => {
+    const explanations = {
+      'Funcional': 'Verifica que el sistema cumpla con su función principal.',
+      'Rendimiento': 'Evalúa la velocidad y eficiencia del sistema bajo diferentes cargas.',
+      'Seguridad': 'Comprueba la protección del sistema contra amenazas y accesos no autorizados.',
+      'UI': 'Valida la interfaz de usuario y la experiencia del usuario.',
+      'Integración': 'Verifica la comunicación correcta entre diferentes componentes del sistema.'
+    };
+    return explanations[type as keyof typeof explanations] || '';
   };
 
   if (!activeProject) {
@@ -304,15 +379,23 @@ const TestCaseManagement = () => {
                               {editingTestCase && (
                                 <div className="grid gap-4 py-4">
                                   <div className="grid gap-2">
-                                    <Label htmlFor="tc-description">Descripción</Label>
+                                    <Label htmlFor="tc-description">
+                                      Descripción <span className="text-red-500">*</span>
+                                    </Label>
                                     <Textarea
                                       id="tc-description"
                                       value={editingTestCase.description}
                                       onChange={(e) => setEditingTestCase({ ...editingTestCase, description: e.target.value })}
+                                      className={validationErrors.description ? 'border-red-500' : ''}
                                     />
+                                    {validationErrors.description && (
+                                      <p className="text-sm text-red-500">{validationErrors.description}</p>
+                                    )}
                                   </div>
                                   <div className="grid gap-2">
-                                    <Label htmlFor="tc-steps">Pasos</Label>
+                                    <Label htmlFor="tc-steps">
+                                      Pasos <span className="text-red-500">*</span>
+                                    </Label>
                                     <Textarea
                                       id="tc-steps"
                                       value={editingTestCase.steps.join('\n')}
@@ -321,24 +404,37 @@ const TestCaseManagement = () => {
                                         steps: e.target.value.split('\n').filter(s => s.trim()) 
                                       })}
                                       rows={4}
+                                      className={validationErrors.steps ? 'border-red-500' : ''}
+                                      placeholder="Escribe cada paso en una línea nueva"
                                     />
+                                    {validationErrors.steps && (
+                                      <p className="text-sm text-red-500">{validationErrors.steps}</p>
+                                    )}
                                   </div>
                                   <div className="grid gap-2">
-                                    <Label htmlFor="tc-expected">Resultado Esperado</Label>
+                                    <Label htmlFor="tc-expected">
+                                      Resultado Esperado <span className="text-red-500">*</span>
+                                    </Label>
                                     <Textarea
                                       id="tc-expected"
                                       value={editingTestCase.expected}
                                       onChange={(e) => setEditingTestCase({ ...editingTestCase, expected: e.target.value })}
+                                      className={validationErrors.expected ? 'border-red-500' : ''}
                                     />
+                                    {validationErrors.expected && (
+                                      <p className="text-sm text-red-500">{validationErrors.expected}</p>
+                                    )}
                                   </div>
                                   <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
-                                      <Label htmlFor="tc-priority">Prioridad</Label>
+                                      <Label htmlFor="tc-priority">
+                                        Prioridad <span className="text-red-500">*</span>
+                                      </Label>
                                       <Select 
                                         value={editingTestCase.priority}
                                         onValueChange={(value) => setEditingTestCase({ ...editingTestCase, priority: value })}
                                       >
-                                        <SelectTrigger id="tc-priority">
+                                        <SelectTrigger id="tc-priority" className={validationErrors.priority ? 'border-red-500' : ''}>
                                           <SelectValue placeholder="Seleccionar prioridad" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -347,22 +443,32 @@ const TestCaseManagement = () => {
                                           <SelectItem value="Baja">Baja</SelectItem>
                                         </SelectContent>
                                       </Select>
+                                      {validationErrors.priority && (
+                                        <p className="text-sm text-red-500">{validationErrors.priority}</p>
+                                      )}
                                     </div>
                                     <div className="grid gap-2">
-                                      <Label htmlFor="tc-type">Tipo</Label>
+                                      <Label htmlFor="tc-type">
+                                        Tipo <span className="text-red-500">*</span>
+                                      </Label>
                                       <Select 
                                         value={editingTestCase.type}
                                         onValueChange={(value) => setEditingTestCase({ ...editingTestCase, type: value })}
                                       >
-                                        <SelectTrigger id="tc-type">
+                                        <SelectTrigger id="tc-type" className={validationErrors.type ? 'border-red-500' : ''}>
                                           <SelectValue placeholder="Seleccionar tipo" />
                                         </SelectTrigger>
                                         <SelectContent>
                                           <SelectItem value="Funcional">Funcional</SelectItem>
                                           <SelectItem value="Rendimiento">Rendimiento</SelectItem>
                                           <SelectItem value="Seguridad">Seguridad</SelectItem>
+                                          <SelectItem value="UI">UI</SelectItem>
+                                          <SelectItem value="Integración">Integración</SelectItem>
                                         </SelectContent>
                                       </Select>
+                                      {validationErrors.type && (
+                                        <p className="text-sm text-red-500">{validationErrors.type}</p>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -437,41 +543,56 @@ const TestCaseManagement = () => {
                                 Ver
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-w-2xl">
                               <DialogHeader>
                                 <DialogTitle>Caso de Prueba: {testCase.id}</DialogTitle>
                                 <DialogDescription>
                                   Detalles completos del caso de prueba en proyecto {activeProject.name}
                                 </DialogDescription>
                               </DialogHeader>
-                              <div className="space-y-4 py-4">
+                              <div className="space-y-6 py-4">
                                 <div>
-                                  <h4 className="text-sm font-medium">Descripción</h4>
-                                  <p className="mt-1 text-sm">{testCase.description}</p>
+                                  <h4 className="text-sm font-medium mb-2">Descripción</h4>
+                                  <p className="text-sm bg-muted/50 p-3 rounded-md">{testCase.description}</p>
                                 </div>
                                 
                                 <div>
-                                  <h4 className="text-sm font-medium">Pasos</h4>
-                                  <ol className="mt-1 text-sm space-y-1 list-decimal list-inside">
+                                  <h4 className="text-sm font-medium mb-2">Pasos a seguir</h4>
+                                  <ol className="text-sm space-y-2 list-decimal list-inside bg-muted/50 p-3 rounded-md">
                                     {testCase.steps.map((step, i) => (
-                                      <li key={i}>{step}</li>
+                                      <li key={i} className="leading-relaxed">{step}</li>
                                     ))}
                                   </ol>
                                 </div>
                                 
                                 <div>
-                                  <h4 className="text-sm font-medium">Resultado Esperado</h4>
-                                  <p className="mt-1 text-sm">{testCase.expected}</p>
+                                  <h4 className="text-sm font-medium mb-2">Resultado Esperado</h4>
+                                  <p className="text-sm bg-muted/50 p-3 rounded-md">{testCase.expected}</p>
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <h4 className="text-sm font-medium">Prioridad</h4>
-                                    <p className="mt-1 text-sm">{testCase.priority}</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="bg-muted/50 p-4 rounded-md">
+                                    <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                                      Prioridad: 
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        testCase.priority === 'Alta' ? 'bg-red-100 text-red-700' :
+                                        testCase.priority === 'Media' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-green-100 text-green-700'
+                                      }`}>
+                                        {testCase.priority}
+                                      </span>
+                                    </h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      {getPriorityExplanation(testCase.priority)}
+                                    </p>
                                   </div>
-                                  <div>
-                                    <h4 className="text-sm font-medium">Tipo</h4>
-                                    <p className="mt-1 text-sm">{testCase.type}</p>
+                                  <div className="bg-muted/50 p-4 rounded-md">
+                                    <h4 className="text-sm font-medium mb-2">
+                                      Tipo: <span className="font-normal">{testCase.type}</span>
+                                    </h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      {getTypeExplanation(testCase.type)}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
