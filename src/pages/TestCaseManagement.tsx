@@ -27,50 +27,7 @@ const TestCaseManagement = () => {
 
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [testCases, setTestCases] = useState([
-    { 
-      id: 'TC001', 
-      projectId: 'PRJ001',
-      description: 'Verificar que un usuario puede iniciar sesión con credenciales válidas', 
-      steps: [
-        'Acceder a la página de login', 
-        'Ingresar email válido', 
-        'Ingresar contraseña válida', 
-        'Hacer clic en el botón de login'
-      ],
-      expected: 'El usuario es redirigido al dashboard',
-      priority: 'Alta',
-      type: 'Funcional'
-    },
-    { 
-      id: 'TC002', 
-      projectId: 'PRJ001',
-      description: 'Verificar que el sistema rechaza credenciales inválidas', 
-      steps: [
-        'Acceder a la página de login', 
-        'Ingresar email inválido', 
-        'Ingresar contraseña', 
-        'Hacer clic en el botón de login'
-      ],
-      expected: 'Se muestra un mensaje de error',
-      priority: 'Alta',
-      type: 'Funcional'
-    },
-    { 
-      id: 'TC003', 
-      projectId: 'PRJ002',
-      description: 'Verificar que el sistema permite recuperar contraseña', 
-      steps: [
-        'Acceder a la página de login', 
-        'Hacer clic en el enlace "Olvidé mi contraseña"', 
-        'Ingresar email registrado', 
-        'Hacer clic en "Enviar"'
-      ],
-      expected: 'Se muestra confirmación de envío de email de recuperación',
-      priority: 'Media',
-      type: 'Funcional'
-    },
-  ]);
+  const [testCases, setTestCases] = useState([]);
 
   const [conversationHistory, setConversationHistory] = useState<{role: string, content: string}[]>([]);
 
@@ -78,6 +35,27 @@ const TestCaseManagement = () => {
   const [testCaseToDelete, setTestCaseToDelete] = useState<any>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [validationErrors, setValidationErrors] = useState<any>({});
+
+  // Load test cases from localStorage on component mount and project change
+  useEffect(() => {
+    const loadTestCases = () => {
+      const storedTestCases = JSON.parse(localStorage.getItem('testCases') || '[]');
+      setTestCases(storedTestCases);
+    };
+    
+    loadTestCases();
+    
+    // Set up storage event listener to update when localStorage changes
+    const handleStorageChange = () => {
+      loadTestCases();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [activeProject]);
 
   useEffect(() => {
     // Initialize conversation history when project changes
@@ -188,7 +166,10 @@ const TestCaseManagement = () => {
         }
       ];
       
-      setTestCases([...testCases, ...newTestCases]);
+      const updatedTestCases = [...testCases, ...newTestCases];
+      setTestCases(updatedTestCases);
+      localStorage.setItem('testCases', JSON.stringify(updatedTestCases));
+      
       setIsGenerating(false);
       setPrompt('');
       toast.success('Nuevos casos de prueba generados');
@@ -213,14 +194,19 @@ const TestCaseManagement = () => {
   const handleConfirmUpdate = () => {
     if (!editingTestCase) return;
     
-    setTestCases(testCases.map(tc => 
+    const updatedTestCases = testCases.map(tc => 
       tc.id === editingTestCase.id ? editingTestCase : tc
-    ));
+    );
+    
+    setTestCases(updatedTestCases);
+    localStorage.setItem('testCases', JSON.stringify(updatedTestCases));
     
     setEditingTestCase(null);
     setShowConfirmDialog(false);
     setValidationErrors({});
-    toast.success('Caso de prueba actualizado');
+    toast.success('Caso de prueba editado correctamente', {
+      className: '!bg-green-50 !border-green-200 !text-green-600',
+    });
   };
 
   const handleCancelUpdate = () => {
@@ -231,7 +217,10 @@ const TestCaseManagement = () => {
   const handleDeleteTestCase = () => {
     if (!testCaseToDelete) return;
     
-    setTestCases(testCases.filter(tc => tc.id !== testCaseToDelete.id));
+    const updatedTestCases = testCases.filter(tc => tc.id !== testCaseToDelete.id);
+    setTestCases(updatedTestCases);
+    localStorage.setItem('testCases', JSON.stringify(updatedTestCases));
+    
     setTestCaseToDelete(null);
     toast.success('Caso de prueba eliminado');
   };

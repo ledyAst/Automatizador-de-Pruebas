@@ -8,7 +8,8 @@ import {
   Play, 
   History as HistoryIcon, 
   MessageSquare, 
-  LayoutDashboard
+  LayoutDashboard,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -88,6 +89,19 @@ const AppSidebar = () => {
                   <Link to="/api-management">
                     <Server className="h-4 w-4" />
                     <span>APIs</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={isActive('/generate-tests')}
+                  tooltip="Crear test manuales"
+                  asChild
+                >
+                  <Link to="/generate-tests">
+                    <Plus className="h-4 w-4" />
+                    <span>Crear test manuales</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

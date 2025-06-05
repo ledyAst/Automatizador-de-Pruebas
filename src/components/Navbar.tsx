@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Server, FolderOpen, Play, History as HistoryIcon, MessageSquare, LayoutDashboard } from 'lucide-react';
+import { Server, FolderOpen, Play, History as HistoryIcon, MessageSquare, LayoutDashboard, Plus } from 'lucide-react';
 import { useProject } from '@/contexts/ProjectContext';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -50,6 +50,13 @@ const Navbar = () => {
               >
                 <Server className="h-4 w-4" />
                 APIs
+              </Link>
+              <Link 
+                to="/generate-tests" 
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 ${isActive('/generate-tests')}`}
+              >
+                <Plus className="h-4 w-4" />
+                Crear test manuales
               </Link>
               <Link 
                 to="/test-case-management" 
