@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import GenerateTests from "./pages/GenerateTests";
 import ExecuteTests from "./pages/ExecuteTests";
 import History from "./pages/History";
 import AppSidebar from "./components/AppSidebar";
@@ -37,7 +36,6 @@ const App = () => (
                 <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                   <Routes>
                     <Route path="/" element={<Index />} />
-                    <Route path="/generate-tests" element={<GenerateTests />} />
                     <Route path="/execute-tests" element={<ExecuteTests />} />
                     <Route path="/history" element={<History />} />
                     <Route path="/project-management" element={<ProjectManagement />} />
