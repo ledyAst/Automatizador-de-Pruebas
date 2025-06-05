@@ -10,21 +10,11 @@ import { toast } from 'sonner';
 import { useProject } from '@/contexts/ProjectContext';
 import ProjectHeader from '@/components/ProjectHeader';
 
-interface ExecutionResult {
-  status: 'passed' | 'failed' | 'warning';
-  executedAt: string;
-  duration: number;
-}
-
-interface ExecutionResults {
-  [testCaseId: string]: ExecutionResult;
-}
-
 const ExecuteTests = () => {
   const { activeProject } = useProject();
   const navigate = useNavigate();
   const [testCases, setTestCases] = useState([]);
-  const [executionResults, setExecutionResults] = useState<ExecutionResults>({});
+  const [executionResults, setExecutionResults] = useState({});
   const [isExecuting, setIsExecuting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -66,7 +56,7 @@ const ExecuteTests = () => {
     
     // Simulate test execution with random results
     setTimeout(() => {
-      const results: ('passed' | 'failed' | 'warning')[] = ['passed', 'failed', 'warning'];
+      const results = ['passed', 'failed', 'warning'];
       const randomResult = results[Math.floor(Math.random() * results.length)];
       
       setExecutionResults(prev => ({
@@ -97,9 +87,9 @@ const ExecuteTests = () => {
     
     // Simulate executing all tests
     setTimeout(() => {
-      const newResults: ExecutionResults = {};
+      const newResults = {};
       filteredTestCases.forEach(testCase => {
-        const results: ('passed' | 'failed' | 'warning')[] = ['passed', 'failed', 'warning'];
+        const results = ['passed', 'failed', 'warning'];
         const randomResult = results[Math.floor(Math.random() * results.length)];
         
         newResults[testCase.id] = {
