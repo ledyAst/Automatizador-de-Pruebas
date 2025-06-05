@@ -9,13 +9,7 @@ import NotFound from "./pages/NotFound";
 import GenerateTests from "./pages/GenerateTests";
 import ExecuteTests from "./pages/ExecuteTests";
 import History from "./pages/History";
-import AppSidebar from "./components/AppSidebar";
-import ProjectManagement from "./pages/ProjectManagement";
-import ApiManagement from "./pages/ApiManagement";
-import TestCaseManagement from "./pages/TestCaseManagement";
-import { ProjectProvider } from "./contexts/ProjectContext";
-import ProjectDashboard from "./pages/ProjectDashboard";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
+import Navbar from "./components/Navbar";
 
 const queryClient = new QueryClient();
 
@@ -23,34 +17,20 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner position="top-right" expand={true} closeButton={true} />
+      <Sonner />
       <BrowserRouter>
-        <ProjectProvider>
-          <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-background">
-              <AppSidebar />
-              <SidebarInset>
-                <div className="flex items-center p-4 border-b">
-                  <SidebarTrigger />
-                  <div className="ml-4 text-lg font-medium">TestAI</div>
-                </div>
-                <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/generate-tests" element={<GenerateTests />} />
-                    <Route path="/execute-tests" element={<ExecuteTests />} />
-                    <Route path="/history" element={<History />} />
-                    <Route path="/project-management" element={<ProjectManagement />} />
-                    <Route path="/api-management" element={<ApiManagement />} />
-                    <Route path="/test-case-management" element={<TestCaseManagement />} />
-                    <Route path="/project-dashboard/:projectId" element={<ProjectDashboard />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </div>
-              </SidebarInset>
-            </div>
-          </SidebarProvider>
-        </ProjectProvider>
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/generate-tests" element={<GenerateTests />} />
+              <Route path="/execute-tests" element={<ExecuteTests />} />
+              <Route path="/history" element={<History />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
+        </div>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

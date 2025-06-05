@@ -1,377 +1,337 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Play, Square, Download, RotateCcw, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { toast } from 'sonner';
-import { useProject } from '../contexts/ProjectContext';
-import ProjectHeader from '../components/ProjectHeader';
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { Play, Check, X, Circle, CircleAlert } from "lucide-react";
+
+interface TestCase {
+  id: string;
+  description: string;
+  expected: string;
+  status: 'pending' | 'success' | 'error' | 'running';
+  output?: string;
+}
 
 const ExecuteTests = () => {
-  const { activeProject } = useProject();
-  const navigate = useNavigate();
+  const [testCases, setTestCases] = useState<TestCase[]>([
+    {
+      id: 'CT-001',
+      description: 'Verificar que el sistema permita el inicio de sesión con credenciales válidas',
+      expected: 'El usuario debe ser redirigido al dashboard después de un inicio de sesión exitoso',
+      status: 'pending',
+    },
+    {
+      id: 'CT-002',
+      description: 'Comprobar que se muestre un mensaje de error cuando se ingresen credenciales inválidas',
+      expected: 'Debe mostrarse un mensaje de error indicando que las credenciales son incorrectas',
+      status: 'pending',
+    },
+    {
+      id: 'CT-003',
+      description: 'Verificar que el sistema bloquee la cuenta después de 3 intentos fallidos de inicio de sesión',
+      expected: 'La cuenta debe ser bloqueada temporalmente y mostrar un mensaje adecuado',
+      status: 'pending',
+    },
+    {
+      id: 'CT-004',
+      description: 'Comprobar que el tiempo de respuesta del inicio de sesión no exceda 1 segundo',
+      expected: 'El tiempo de respuesta debe ser menor a 1 segundo en condiciones normales',
+      status: 'pending',
+    },
+    {
+      id: 'CT-005',
+      description: 'Verificar que el sistema mantenga la sesión activa durante el periodo configurado',
+      expected: 'La sesión debe permanecer activa durante el tiempo configurado sin cerrar automáticamente',
+      status: 'pending',
+    },
+  ]);
   
-  useEffect(() => {
-    if (!activeProject) {
-      toast.warning('Selecciona un proyecto para ejecutar pruebas');
-      navigate('/project-management');
-    }
-  }, [activeProject, navigate]);
-
-  const [testCases, setTestCases] = useState([]);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [currentTestIndex, setCurrentTestIndex] = useState(0);
+  const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [completedTests, setCompletedTests] = useState(0);
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
-  const [executionProgress, setExecutionProgress] = useState(0);
-
-  // Load test cases from localStorage on component mount and project change
-  useEffect(() => {
-    const loadTestCases = () => {
-      const storedTestCases = JSON.parse(localStorage.getItem('testCases') || '[]');
-      
-      // Filter by active project and add execution status
-      const projectTestCases = activeProject 
-        ? storedTestCases
-            .filter(tc => tc.projectId === activeProject.id)
-            .map(tc => ({ ...tc, status: 'pending', output: '' }))
-        : [];
-      
-      setTestCases(projectTestCases);
-    };
-    
-    loadTestCases();
-    
-    // Set up storage event listener to update when localStorage changes
-    const handleStorageChange = () => {
-      loadTestCases();
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [activeProject]);
-
-  // Calculate execution statistics
-  const executionStats = {
-    total: testCases.length,
-    executed: testCases.filter(test => test.status !== 'pending').length,
-    passed: testCases.filter(test => test.status === 'success').length,
-    failed: testCases.filter(test => test.status === 'failed').length,
-    pending: testCases.filter(test => test.status === 'pending').length
-  };
-
-  const simulateTestExecution = (testCase: any) => {
-    return new Promise((resolve) => {
-      const randomDuration = Math.random() * (5000 - 1000) + 1000;
-      const randomSuccess = Math.random() < 0.8;
-
-      setConsoleOutput(prev => [
-        ...prev,
-        `[${new Date().toLocaleTimeString()}] Ejecutando prueba ${testCase.id}: ${testCase.description}`
-      ]);
-
-      setTimeout(() => {
-        const status = randomSuccess ? 'success' : 'failed';
-        const output = randomSuccess
-          ? `[${new Date().toLocaleTimeString()}] ✅ Prueba ${testCase.id} completada exitosamente.`
-          : `[${new Date().toLocaleTimeString()}] ❌ Prueba ${testCase.id} fallida.`;
-
-        setConsoleOutput(prev => [...prev, output]);
-        resolve({ status, output });
-      }, randomDuration);
-    });
-  };
-
-  const runNextTest = async () => {
-    if (currentTestIndex < testCases.length && isExecuting) {
-      const currentTest = testCases[currentTestIndex];
-      
-      setTestCases(prev => prev.map((test, index) =>
-        index === currentTestIndex ? { ...test, status: 'running' } : test
-      ));
-
-      const result: any = await simulateTestExecution(currentTest);
-      
-      setTestCases(prev => prev.map((test, index) =>
-        index === currentTestIndex ? { ...test, status: result.status, output: result.output } : test
-      ));
-      
-      setCurrentTestIndex(prev => prev + 1);
-      setExecutionProgress(((currentTestIndex + 1) / testCases.length) * 100);
+  
+  const toggleSelectAll = () => {
+    if (selectedTests.length === testCases.length) {
+      setSelectedTests([]);
     } else {
-      setIsExecuting(false);
-      setConsoleOutput(prev => [...prev, `[${new Date().toLocaleTimeString()}] ✅ Ejecución de pruebas completada.`]);
-      toast.success('Ejecución de pruebas completada');
+      setSelectedTests(testCases.map(test => test.id));
     }
   };
-
-  useEffect(() => {
-    if (isExecuting) {
-      runNextTest();
+  
+  const toggleTestSelection = (testId: string) => {
+    if (selectedTests.includes(testId)) {
+      setSelectedTests(selectedTests.filter(id => id !== testId));
+    } else {
+      setSelectedTests([...selectedTests, testId]);
     }
-  }, [isExecuting, currentTestIndex, testCases]);
-
-  const startTestExecution = () => {
-    if (testCases.length === 0) {
-      toast.warning('No hay casos de prueba para ejecutar');
+  };
+  
+  const runTests = () => {
+    if (selectedTests.length === 0) {
+      toast.error('Por favor, selecciona al menos un caso de prueba');
       return;
     }
-    setIsExecuting(true);
-    setCurrentTestIndex(0);
-    setExecutionProgress(0);
-    setConsoleOutput([`[${new Date().toLocaleTimeString()}] 🚀 Iniciando ejecución de pruebas...`]);
     
-    // Reset test statuses
-    setTestCases(prev => prev.map(test => ({ ...test, status: 'pending', output: '' })));
-  };
-
-  const stopTestExecution = () => {
-    setIsExecuting(false);
-    setConsoleOutput(prev => [...prev, `[${new Date().toLocaleTimeString()}] 🛑 Ejecución de pruebas interrumpida.`]);
-    toast.warning('Ejecución de pruebas interrumpida');
-  };
-
-  const resetTests = () => {
-    setIsExecuting(false);
-    setCurrentTestIndex(0);
-    setExecutionProgress(0);
+    setIsRunning(true);
+    setProgress(0);
+    setCompletedTests(0);
     setConsoleOutput([]);
-    setTestCases(prev => prev.map(test => ({ ...test, status: 'pending', output: '' })));
-    toast.info('Estados de las pruebas reiniciados');
-  };
-
-  // Updated function to actually download an Excel file
-  const downloadResults = () => {
-    if (!activeProject) {
-      toast.error('No hay proyecto activo');
-      return;
-    }
-
-    // Simulate occasional failure (20% chance)
-    if (Math.random() < 0.2) {
-      const errorCode = Math.floor(Math.random() * 900) + 100;
-      toast.error(`No se pudo completar la acción. Intente nuevamente. Error ${errorCode}.`, {
-        className: '!bg-red-50 !border-red-200 !text-red-600',
-      });
-      return;
-    }
-
-    // Clean project name for filename
-    const cleanProjectName = activeProject.name.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileName = `resultados_proyecto_${cleanProjectName}.xlsx`;
     
-    // Add console log for download start
-    setConsoleOutput(prev => [
-      ...prev,
-      `[${new Date().toLocaleTimeString()}] Descargando resultados de pruebas en formato Excel...`
-    ]);
+    // Reset all test statuses
+    setTestCases(testCases.map(test => ({
+      ...test,
+      status: selectedTests.includes(test.id) ? 'pending' : test.status,
+      output: selectedTests.includes(test.id) ? undefined : test.output
+    })));
     
-    // Create Excel-like content (CSV format that Excel can open)
-    const executedTests = testCases.filter(test => test.status !== 'pending');
+    // Run tests sequentially with simulated delays
+    let currentIndex = 0;
+    const selectedTestCases = testCases.filter(test => selectedTests.includes(test.id));
     
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "ID,Descripción,Resultado Esperado,Estado,Salida\n";
-    
-    executedTests.forEach(test => {
-      const status = test.status === 'success' ? 'Exitoso' : 'Fallido';
-      const output = test.output || '';
-      csvContent += `"${test.id}","${test.description}","${test.expected}","${status}","${output}"\n`;
-    });
-    
-    // Create and trigger download
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", fileName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Show success message and update console
-    setTimeout(() => {
-      toast.success('Resultados descargados correctamente en formato Excel');
+    const runNextTest = () => {
+      if (currentIndex >= selectedTestCases.length) {
+        setIsRunning(false);
+        toast.success(`Ejecución completada: ${completedTests} pruebas ejecutadas`);
+        return;
+      }
       
+      const currentTest = selectedTestCases[currentIndex];
+      
+      // Update current test to running status
+      setTestCases(prevTests => prevTests.map(test => 
+        test.id === currentTest.id ? { ...test, status: 'running' } : test
+      ));
+      
+      // Add console output log
       setConsoleOutput(prev => [
-        ...prev,
-        `[${new Date().toLocaleTimeString()}] ✅ Descarga completada: ${fileName}`
+        ...prev, 
+        `[${new Date().toLocaleTimeString()}] Ejecutando prueba ${currentTest.id}: ${currentTest.description}`
       ]);
-    }, 500);
+      
+      // Simulate test execution time (between 1-3 seconds)
+      const executionTime = Math.floor(Math.random() * 2000) + 1000;
+      
+      setTimeout(() => {
+        // Generate random success/error with 80% success rate
+        const isSuccess = Math.random() < 0.8;
+        const status = isSuccess ? 'success' : 'error';
+        let output = '';
+        
+        if (isSuccess) {
+          output = `Test pasado correctamente. La acción se completó como se esperaba.`;
+        } else {
+          output = `Error: No se pudo completar la acción. Código de error: AUTH-${Math.floor(Math.random() * 1000)}`;
+        }
+        
+        // Update test case with results
+        setTestCases(prevTests => prevTests.map(test => 
+          test.id === currentTest.id ? { 
+            ...test, 
+            status, 
+            output 
+          } : test
+        ));
+        
+        // Add result to console output
+        setConsoleOutput(prev => [
+          ...prev, 
+          `[${new Date().toLocaleTimeString()}] Prueba ${currentTest.id} ${isSuccess ? 'EXITOSA ✓' : 'FALLIDA ✕'}: ${output}`
+        ]);
+        
+        // Update progress
+        const newCompletedTests = completedTests + 1;
+        setCompletedTests(newCompletedTests);
+        setProgress((newCompletedTests / selectedTestCases.length) * 100);
+        
+        // Run next test
+        currentIndex++;
+        runNextTest();
+      }, executionTime);
+    };
+    
+    // Start the process
+    runNextTest();
   };
 
-  if (!activeProject) {
-    return null;
-  }
+  const getStatusIcon = (status: string) => {
+    switch(status) {
+      case 'success': return <Check className="h-5 w-5 text-green-500" />;
+      case 'error': return <X className="h-5 w-5 text-red-500" />;
+      case 'running': return <CircleAlert className="h-5 w-5 text-yellow-500 animate-pulse" />;
+      default: return <Circle className="h-5 w-5 text-gray-300" />;
+    }
+  };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Ejecutar Tests</h1>
-        <p className="text-muted-foreground">Ejecuta los casos de prueba definidos para el proyecto seleccionado</p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold">Ejecución de Casos de Prueba</h1>
+        <p className="text-muted-foreground mt-2">
+          Selecciona y ejecuta casos de prueba para validar el comportamiento del sistema.
+        </p>
       </div>
-
-      <ProjectHeader />
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Casos de Prueba</CardTitle>
-                <CardDescription>
-                  {testCases.length} casos de prueba para {activeProject.name}
-                </CardDescription>
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  disabled={isExecuting}
-                  onClick={startTestExecution}
-                  className="flex items-center gap-2"
-                >
-                  <Play className="h-4 w-4" />
-                  Ejecutar
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={!isExecuting}
-                  onClick={stopTestExecution}
-                  className="flex items-center gap-2"
-                >
-                  <Square className="h-4 w-4" />
-                  Detener
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={resetTests}
-                  className="flex items-center gap-2"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Reiniciar
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Progress value={executionProgress} className="mb-4" />
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {testCases.map((testCase) => (
-                    <TableRow key={testCase.id}>
-                      <TableCell>{testCase.id}</TableCell>
-                      <TableCell className="truncate max-w-xs">{testCase.description}</TableCell>
-                      <TableCell>
-                        {testCase.status === 'pending' && (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            <Clock className="h-4 w-4 mr-2" />
-                            Pendiente
-                          </Badge>
-                        )}
-                        {testCase.status === 'running' && (
-                          <Badge variant="secondary">
-                            <Clock className="h-4 w-4 mr-2 animate-spin" />
-                            Ejecutando...
-                          </Badge>
-                        )}
-                        {testCase.status === 'success' && (
-                          <Badge variant="success">
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Exitoso
-                          </Badge>
-                        )}
-                        {testCase.status === 'failed' && (
-                          <Badge variant="destructive">
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Fallido
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7">
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Casos de Prueba Disponibles</h2>
+              <Button 
+                onClick={runTests}
+                disabled={isRunning || selectedTests.length === 0}
+                className="gap-2"
+              >
+                <Play className="h-4 w-4" />
+                Ejecutar Seleccionados ({selectedTests.length})
+              </Button>
+            </div>
+            
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="p-2 text-left">
+                      <div className="flex items-center">
+                        <Checkbox
+                          checked={selectedTests.length === testCases.length && testCases.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                          className="mr-2"
+                        />
+                        <span>Seleccionar</span>
+                      </div>
+                    </th>
+                    <th className="p-2 text-left">ID</th>
+                    <th className="p-2 text-left">Descripción</th>
+                    <th className="p-2 text-left">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {testCases.map((test, index) => (
+                    <tr key={test.id} className={index % 2 ? 'bg-muted/20' : ''}>
+                      <td className="p-2">
+                        <Checkbox
+                          checked={selectedTests.includes(test.id)}
+                          onCheckedChange={() => toggleTestSelection(test.id)}
+                          disabled={isRunning}
+                        />
+                      </td>
+                      <td className="p-2 font-medium">{test.id}</td>
+                      <td className="p-2">{test.description}</td>
+                      <td className="p-2">
+                        <div className="flex items-center">
+                          {getStatusIcon(test.status)}
+                          <span className="ml-2 capitalize">
+                            {test.status === 'pending' ? '-' : test.status}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                  {testCases.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8">
-                        <p className="text-muted-foreground">No hay casos de prueba disponibles para este proyecto.</p>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
+                </tbody>
+              </table>
+            </div>
+
+            {isRunning && (
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progreso</span>
+                  <span>{completedTests} de {selectedTests.length} completados</span>
+                </div>
+                <Progress value={progress} />
+              </div>
+            )}
           </Card>
         </div>
 
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Consola</CardTitle>
-              <CardDescription>
-                Registro de la ejecución de pruebas
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[500px]">
-              <ScrollArea className="h-full">
-                <div className="flex flex-col space-y-2">
-                  {consoleOutput.map((log, index) => (
-                    <p key={index} className="text-sm text-muted-foreground">
-                      {log}
-                    </p>
-                  ))}
+        <div className="lg:col-span-5">
+          <Card className="p-6 h-full flex flex-col">
+            <h2 className="text-xl font-semibold mb-4">Resultados de Ejecución</h2>
+            
+            <Tabs defaultValue="console" className="flex-1 flex flex-col">
+              <TabsList className="mb-4">
+                <TabsTrigger value="console">Consola</TabsTrigger>
+                <TabsTrigger value="results">Resumen</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="console" className="flex-1 flex flex-col">
+                <div className="bg-black rounded-md p-2 flex-1 overflow-auto">
+                  <pre className="text-white font-mono text-sm h-full min-h-[300px]">
+                    {consoleOutput.length > 0 
+                      ? consoleOutput.join('\n\n')
+                      : 'La salida de la consola aparecerá aquí cuando ejecutes los tests...'}
+                  </pre>
                 </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Estadísticas</CardTitle>
-              <CardDescription>
-                Resumen de la ejecución
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium">Total</p>
-                  <p className="text-2xl">{executionStats.total}</p>
+              </TabsContent>
+              
+              <TabsContent value="results" className="flex-1">
+                <div className="space-y-4">
+                  {testCases.filter(t => t.status !== 'pending').length > 0 ? (
+                    <>
+                      <div className="flex justify-around text-center">
+                        <div>
+                          <div className="text-3xl font-bold text-green-500">
+                            {testCases.filter(t => t.status === 'success').length}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Exitosos</div>
+                        </div>
+                        <Separator orientation="vertical" />
+                        <div>
+                          <div className="text-3xl font-bold text-red-500">
+                            {testCases.filter(t => t.status === 'error').length}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Fallidos</div>
+                        </div>
+                        <Separator orientation="vertical" />
+                        <div>
+                          <div className="text-3xl font-bold">
+                            {testCases.filter(t => t.status !== 'pending').length}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Total</div>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="space-y-3">
+                        <h3 className="font-medium">Detalle de Resultados</h3>
+                        {testCases
+                          .filter(t => t.status !== 'pending')
+                          .map(test => (
+                            <div key={test.id} className={`p-3 rounded-md ${
+                              test.status === 'success' ? 'bg-green-50 border border-green-100' : 
+                              test.status === 'error' ? 'bg-red-50 border border-red-100' :
+                              'bg-gray-50 border border-gray-100'
+                            }`}>
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(test.status)}
+                                <span className="font-medium">{test.id}</span>
+                              </div>
+                              {test.output && (
+                                <p className={`text-sm mt-1 ${
+                                  test.status === 'error' ? 'text-red-700' : 'text-muted-foreground'
+                                }`}>
+                                  {test.output}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No hay resultados disponibles. Ejecuta algunas pruebas para ver el resumen.
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm font-medium">Ejecutados</p>
-                  <p className="text-2xl">{executionStats.executed}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Exitosos</p>
-                  <p className="text-2xl">{executionStats.passed}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Fallidos</p>
-                  <p className="text-2xl">{executionStats.failed}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Pendientes</p>
-                  <p className="text-2xl">{executionStats.pending}</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full mt-4 flex items-center gap-2"
-                onClick={downloadResults}
-              >
-                <Download className="h-4 w-4" />
-                Descargar Resultados
-              </Button>
-            </CardContent>
+              </TabsContent>
+            </Tabs>
           </Card>
         </div>
       </div>

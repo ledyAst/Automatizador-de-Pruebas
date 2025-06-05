@@ -1,366 +1,198 @@
 
-import React, { useState, useEffect } from 'react';
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Check, X } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { useProject } from '@/contexts/ProjectContext';
-import ProjectHeader from '@/components/ProjectHeader';
-import { useNavigate } from 'react-router-dom';
-
-// Form schema for manual test case creation
-const formSchema = z.object({
-  description: z.string().min(1, {
-    message: "La descripción es obligatoria.",
-  }),
-  steps: z.string().min(1, {
-    message: "Los pasos son obligatorios.",
-  }),
-  expected: z.string().min(1, {
-    message: "El resultado esperado es obligatorio.",
-  }),
-  priority: z.string().min(1, {
-    message: "La prioridad es obligatoria.",
-  }),
-  type: z.string().min(1, {
-    message: "El tipo es obligatorio.",
-  }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { download, fileText } from "lucide-react";
 
 const GenerateTests = () => {
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingData, setPendingData] = useState<FormValues | null>(null);
-  const [validationErrors, setValidationErrors] = useState<any>({});
-  const { activeProject } = useProject();
-  const navigate = useNavigate();
+  const [requirements, setRequirements] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedTests, setGeneratedTests] = useState<Array<{
+    id: string;
+    description: string;
+    expected: string;
+    priority: 'Alta' | 'Media' | 'Baja';
+    type: 'Funcional' | 'Rendimiento' | 'Seguridad';
+  }>>([]);
   
-  useEffect(() => {
-    if (!activeProject) {
-      toast.warning('Selecciona un proyecto para crear casos de prueba', {
-        className: '!bg-amber-50 !border-amber-200 !text-amber-600',
-      });
-      navigate('/project-management');
-    }
-  }, [activeProject, navigate]);
-
-  // Initialize the form
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      description: "",
-      steps: "",
-      expected: "",
-      priority: "",
-      type: "",
-    },
-  });
-
-  // Validation function that allows accented characters
-  const validateField = (value: string, fieldName: string): string | undefined => {
-    if (!value.trim()) {
-      return `${fieldName} es obligatorio`;
-    }
-    
-    // Allow letters (including accented), numbers, spaces, and basic punctuation
-    if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\.\,\;\:\!\?\-\(\)]+$/.test(value)) {
-      return `${fieldName} no debe contener caracteres especiales no válidos`;
-    }
-    
-    return undefined;
-  };
-
-  // Function to validate all form data
-  const validateFormData = (data: FormValues) => {
-    const errors: any = {};
-    
-    errors.description = validateField(data.description, 'La descripción');
-    errors.steps = validateField(data.steps, 'Los pasos');
-    errors.expected = validateField(data.expected, 'El resultado esperado');
-    
-    if (!data.priority) {
-      errors.priority = 'La prioridad es obligatoria';
-    }
-    
-    if (!data.type) {
-      errors.type = 'El tipo es obligatorio';
-    }
-    
-    return errors;
-  };
-
-  // Function to handle form submission
-  const onSubmit = (values: FormValues) => {
-    const errors = validateFormData(values);
-    const hasErrors = Object.values(errors).some(error => error);
-    
-    if (hasErrors) {
-      setValidationErrors(errors);
+  const handleGenerateTests = () => {
+    if (!requirements.trim()) {
+      toast.error('Por favor, ingresa los requisitos funcionales');
       return;
     }
     
-    setValidationErrors({});
-    setPendingData(values);
-    setShowConfirmDialog(true);
+    setIsGenerating(true);
+    
+    // Simulate API call with a timeout
+    setTimeout(() => {
+      // Mock data generation
+      const mockTests = [
+        {
+          id: 'CT-001',
+          description: 'Verificar que el sistema permita el inicio de sesión con credenciales válidas',
+          expected: 'El usuario debe ser redirigido al dashboard después de un inicio de sesión exitoso',
+          priority: 'Alta',
+          type: 'Funcional'
+        },
+        {
+          id: 'CT-002',
+          description: 'Comprobar que se muestre un mensaje de error cuando se ingresen credenciales inválidas',
+          expected: 'Debe mostrarse un mensaje de error indicando que las credenciales son incorrectas',
+          priority: 'Alta',
+          type: 'Funcional'
+        },
+        {
+          id: 'CT-003',
+          description: 'Verificar que el sistema bloquee la cuenta después de 3 intentos fallidos de inicio de sesión',
+          expected: 'La cuenta debe ser bloqueada temporalmente y mostrar un mensaje adecuado',
+          priority: 'Media',
+          type: 'Seguridad'
+        },
+        {
+          id: 'CT-004',
+          description: 'Comprobar que el tiempo de respuesta del inicio de sesión no exceda 1 segundo',
+          expected: 'El tiempo de respuesta debe ser menor a 1 segundo en condiciones normales',
+          priority: 'Media',
+          type: 'Rendimiento'
+        },
+        {
+          id: 'CT-005',
+          description: 'Verificar que el sistema mantenga la sesión activa durante el periodo configurado',
+          expected: 'La sesión debe permanecer activa durante el tiempo configurado sin cerrar automáticamente',
+          priority: 'Baja',
+          type: 'Funcional'
+        },
+      ];
+      
+      setGeneratedTests(mockTests);
+      setIsGenerating(false);
+      toast.success('Casos de prueba generados con éxito');
+    }, 2000);
   };
-
-  // Function to confirm saving the test case
-  const handleConfirmSave = () => {
-    if (!pendingData || !activeProject) return;
-    
-    // Get existing test cases from localStorage
-    const existingTestCases = JSON.parse(localStorage.getItem('testCases') || '[]');
-    
-    // Generate new test case ID
-    const newId = `TC${String(existingTestCases.length + 1).padStart(3, '0')}`;
-    
-    // Create new test case
-    const newTestCase = {
-      id: newId,
-      projectId: activeProject.id,
-      description: pendingData.description.trim(),
-      steps: pendingData.steps.trim().split('\n').filter(s => s.trim()),
-      expected: pendingData.expected.trim(),
-      priority: pendingData.priority,
-      type: pendingData.type
-    };
-    
-    // Save to localStorage
-    const updatedTestCases = [...existingTestCases, newTestCase];
-    localStorage.setItem('testCases', JSON.stringify(updatedTestCases));
-    
-    // Reset form and close dialog
-    form.reset();
-    setShowConfirmDialog(false);
-    setPendingData(null);
-    
-    // Show success toast and navigate
-    toast.success('Caso de prueba editado correctamente', {
-      className: '!bg-green-50 !border-green-200 !text-green-600',
-    });
-    
-    // Navigate to test case management
-    navigate('/test-case-management');
+  
+  const handleExport = () => {
+    if (generatedTests.length > 0) {
+      toast.success('Casos de prueba exportados correctamente');
+    } else {
+      toast.error('No hay casos de prueba para exportar');
+    }
   };
-
-  // Function to cancel saving
-  const handleCancelSave = () => {
-    setShowConfirmDialog(false);
-    setPendingData(null);
-  };
-
-  if (!activeProject) {
-    return null;
-  }
-
+  
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Crear test manuales</h1>
-        <p className="text-muted-foreground">Crea casos de prueba manualmente para el proyecto seleccionado</p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold">Generación de Casos de Prueba</h1>
+        <p className="text-muted-foreground mt-2">
+          Ingresa descripción funcional o requerimientos para generar casos de prueba automáticamente.
+        </p>
       </div>
-
-      <ProjectHeader />
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Nuevo Caso de Prueba</CardTitle>
-          <CardDescription>
-            Completa los campos para crear un nuevo caso de prueba para el proyecto "{activeProject.name}"
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Descripción <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe qué debe verificar este caso de prueba"
-                        className={validationErrors.description ? 'border-red-500' : ''}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Describe claramente qué funcionalidad o comportamiento debe verificar este caso de prueba.
-                    </FormDescription>
-                    {validationErrors.description && (
-                      <p className="text-sm text-red-500">{validationErrors.description}</p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="steps"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Pasos a seguir <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Escribe cada paso en una línea nueva&#10;Ejemplo:&#10;1. Acceder a la página de login&#10;2. Ingresar email válido&#10;3. Hacer clic en enviar"
-                        className={`min-h-[120px] ${validationErrors.steps ? 'border-red-500' : ''}`}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Lista los pasos que debe seguir el usuario para ejecutar este caso de prueba. Escribe cada paso en una línea nueva.
-                    </FormDescription>
-                    {validationErrors.steps && (
-                      <p className="text-sm text-red-500">{validationErrors.steps}</p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="expected"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Resultado Esperado <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe qué debe suceder cuando se ejecuten los pasos correctamente"
-                        className={validationErrors.expected ? 'border-red-500' : ''}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Especifica claramente cuál debe ser el resultado cuando se ejecuten todos los pasos correctamente.
-                    </FormDescription>
-                    {validationErrors.expected && (
-                      <p className="text-sm text-red-500">{validationErrors.expected}</p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Prioridad <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className={validationErrors.priority ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Seleccionar prioridad" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Alta">Alta</SelectItem>
-                          <SelectItem value="Media">Media</SelectItem>
-                          <SelectItem value="Baja">Baja</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Define la importancia de este caso de prueba
-                      </FormDescription>
-                      {validationErrors.priority && (
-                        <p className="text-sm text-red-500">{validationErrors.priority}</p>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Tipo <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className={validationErrors.type ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Seleccionar tipo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Funcional">Funcional</SelectItem>
-                          <SelectItem value="Rendimiento">Rendimiento</SelectItem>
-                          <SelectItem value="Seguridad">Seguridad</SelectItem>
-                          <SelectItem value="UI">UI</SelectItem>
-                          <SelectItem value="Integración">Integración</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Categoriza este caso de prueba
-                      </FormDescription>
-                      {validationErrors.type && (
-                        <p className="text-sm text-red-500">{validationErrors.type}</p>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="flex justify-end space-x-4">
-                <Button type="button" variant="outline" onClick={() => form.reset()}>
-                  Limpiar Formulario
-                </Button>
-                <Button type="submit" className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Crear Caso de Prueba
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
+      
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-4">Requisitos Funcionales</h2>
+        <Textarea 
+          placeholder="Describe los requisitos funcionales o pega la especificación del módulo aquí..."
+          value={requirements}
+          onChange={(e) => setRequirements(e.target.value)}
+          className="min-h-[200px] mb-4"
+        />
+        
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select defaultValue="funcional">
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Tipo de Prueba" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="funcional">Funcional</SelectItem>
+              <SelectItem value="rendimiento">Rendimiento</SelectItem>
+              <SelectItem value="seguridad">Seguridad</SelectItem>
+              <SelectItem value="integracion">Integración</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select defaultValue="all">
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Prioridad" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="alta">Alta</SelectItem>
+              <SelectItem value="media">Media</SelectItem>
+              <SelectItem value="baja">Baja</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button 
+            onClick={handleGenerateTests}
+            disabled={isGenerating} 
+            className="w-full sm:w-auto sm:ml-auto"
+          >
+            {isGenerating ? 'Generando...' : 'Generar Casos de Prueba'}
+          </Button>
+        </div>
       </Card>
-
-      {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Está seguro que desea editar este caso de prueba?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se creará un nuevo caso de prueba para el proyecto "{activeProject.name}" con la información proporcionada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelSave} className="gap-2">
-              <X className="h-4 w-4" />
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSave} className="gap-2">
-              <Check className="h-4 w-4" />
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      
+      {generatedTests.length > 0 && (
+        <Card className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Casos de Prueba Generados</h2>
+            <Button onClick={handleExport} variant="outline" className="gap-2">
+              <fileText className="h-4 w-4" />
+              Exportar
+            </Button>
+          </div>
+          
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">ID</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead>Resultado Esperado</TableHead>
+                  <TableHead>Prioridad</TableHead>
+                  <TableHead>Tipo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {generatedTests.map((test) => (
+                  <TableRow key={test.id}>
+                    <TableCell className="font-medium">{test.id}</TableCell>
+                    <TableCell>{test.description}</TableCell>
+                    <TableCell>{test.expected}</TableCell>
+                    <TableCell>
+                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                        test.priority === 'Alta' ? 'bg-red-100 text-red-800' : 
+                        test.priority === 'Media' ? 'bg-yellow-100 text-yellow-800' : 
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {test.priority}
+                      </span>
+                    </TableCell>
+                    <TableCell>{test.type}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
