@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -189,7 +190,7 @@ const ExecuteTests = () => {
     runNextTest();
   };
 
-  // Updated function to download test results with error simulation
+  // Updated function to download test results with proper error simulation and file naming
   const downloadResults = () => {
     const { hasError, errorMessage } = simulateDownloadError();
     
@@ -198,21 +199,51 @@ const ExecuteTests = () => {
       return;
     }
     
-    // Add console log for successful download
+    if (!activeProject) {
+      toast.error('No hay proyecto activo seleccionado');
+      return;
+    }
+    
+    // Add console log for successful download start
     setConsoleOutput(prev => [
       ...prev,
-      `[${new Date().toLocaleTimeString()}] Descargando resultados de pruebas en formato Excel...`
+      `[${new Date().toLocaleTimeString()}] Iniciando descarga de resultados para proyecto "${activeProject.name}"...`
     ]);
     
-    // Simulate successful download with toast
+    // Create filename with project name
+    const projectNameForFile = activeProject.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `resultados_proyecto_${projectNameForFile}.xlsx`;
+    
+    // Simulate download process
     setTimeout(() => {
+      // Create a simple CSV content (simulating Excel export)
+      const executedTests = testCases.filter(test => test.status !== 'pending');
+      let csvContent = "ID,Descripción,Estado,Resultado,Proyecto\n";
+      
+      executedTests.forEach(test => {
+        const status = test.status === 'success' ? 'Exitoso' : test.status === 'error' ? 'Fallido' : 'Pendiente';
+        const result = test.output || 'N/A';
+        csvContent += `"${test.id}","${test.description}","${status}","${result}","${activeProject.name}"\n`;
+      });
+      
+      // Create and trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
       toast.success('Resultados descargados correctamente');
       
       setConsoleOutput(prev => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] Descarga completada: resultados_pruebas_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`
+        `[${new Date().toLocaleTimeString()}] Descarga completada: ${fileName}`
       ]);
-    }, 1000);
+    }, 1500);
   };
 
   const getStatusIcon = (status: string) => {

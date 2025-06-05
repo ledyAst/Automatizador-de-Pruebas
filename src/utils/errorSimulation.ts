@@ -32,3 +32,40 @@ export const simulateDownloadError = () => {
     errorMessage: hasError ? `No se pudo completar la acción. Intente nuevamente. Error [${errorCode}].` : null
   };
 };
+
+// Validation utilities for forms
+export const validateProjectName = (name: string): string | null => {
+  if (!name.trim()) {
+    return 'El nombre es obligatorio';
+  }
+  
+  // Allow letters, numbers, spaces, and accented characters
+  const validPattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+$/;
+  if (!validPattern.test(name)) {
+    return 'Solo se permiten letras, números, espacios y tildes';
+  }
+  
+  return null;
+};
+
+export const validateDescription = (description: string): string | null => {
+  if (!description.trim()) {
+    return 'La descripción es obligatoria';
+  }
+  
+  return null;
+};
+
+export const validateTestCaseField = (value: string, fieldName: string): string | null => {
+  if (!value.trim()) {
+    return `${fieldName} es obligatorio`;
+  }
+  
+  // Allow letters, numbers, spaces, and accented characters for test cases
+  const validPattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s.,;:()[\]{}"-]+$/;
+  if (!validPattern.test(value)) {
+    return 'Solo se permiten letras, números, espacios, tildes y signos de puntuación básicos';
+  }
+  
+  return null;
+};

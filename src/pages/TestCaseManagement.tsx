@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProject } from '../contexts/ProjectContext';
 import ProjectHeader from '../components/ProjectHeader';
+import { validateTestCaseField } from '@/utils/errorSimulation';
 
 const TestCaseManagement = () => {
   const { activeProject, projects } = useProject();
@@ -74,13 +75,19 @@ const TestCaseManagement = () => {
   ]);
 
   const [conversationHistory, setConversationHistory] = useState<{role: string, content: string}[]>([]);
-
   const [editingTestCase, setEditingTestCase] = useState<any>(null);
   const [testCaseToDelete, setTestCaseToDelete] = useState<any>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [formErrors, setFormErrors] = useState({
+    description: '',
+    steps: '',
+    expected: '',
+    priority: '',
+    type: ''
+  });
 
   useEffect(() => {
-    // Initialize conversation history when project changes
     if (activeProject) {
       setConversationHistory([
         { 
@@ -91,7 +98,6 @@ const TestCaseManagement = () => {
     }
   }, [activeProject]);
 
-  // Filter test cases by active project
   const filteredTestCases = activeProject 
     ? testCases.filter(tc => tc.projectId === activeProject.id)
     : [];
@@ -99,7 +105,6 @@ const TestCaseManagement = () => {
   const handleSendPrompt = () => {
     if (!prompt.trim() || !activeProject) return;
     
-    // Add user message to conversation
     setConversationHistory([
       ...conversationHistory,
       { role: 'user', content: prompt }
@@ -107,7 +112,6 @@ const TestCaseManagement = () => {
     
     setIsGenerating(true);
     
-    // Simulate AI response
     setTimeout(() => {
       const assistantResponse = `Basado en tu descripción para el proyecto "${activeProject.name}", he generado 2 nuevos casos de prueba.`;
       
@@ -116,7 +120,6 @@ const TestCaseManagement = () => {
         { role: 'assistant', content: assistantResponse }
       ]);
       
-      // Add mock generated test cases
       const newTestCases = [
         { 
           id: `TC${String(testCases.length + 1).padStart(3, '0')}`,
@@ -151,7 +154,38 @@ const TestCaseManagement = () => {
     }, 2000);
   };
 
+  const validateEditForm = () => {
+    if (!editingTestCase) return false;
+    
+    const errors = {
+      description: validateTestCaseField(editingTestCase.description, 'La descripción') || '',
+      steps: editingTestCase.steps.length === 0 || editingTestCase.steps.some((step: string) => !step.trim()) ? 'Los pasos son obligatorios' : '',
+      expected: validateTestCaseField(editingTestCase.expected, 'El resultado esperado') || '',
+      priority: !editingTestCase.priority ? 'La prioridad es obligatoria' : '',
+      type: !editingTestCase.type ? 'El tipo es obligatorio' : ''
+    };
+    
+    setFormErrors(errors);
+    return Object.values(errors).every(error => !error);
+  };
+
+  const handleEditClick = (testCase: any) => {
+    setEditingTestCase({...testCase});
+    setFormErrors({
+      description: '',
+      steps: '',
+      expected: '',
+      priority: '',
+      type: ''
+    });
+    setShowEditDialog(true);
+  };
+
   const handleShowConfirmDialog = () => {
+    if (!validateEditForm()) {
+      return;
+    }
+    setShowEditDialog(false);
     setShowConfirmDialog(true);
   };
 
@@ -164,13 +198,19 @@ const TestCaseManagement = () => {
     
     setEditingTestCase(null);
     setShowConfirmDialog(false);
-    toast.success('Caso de prueba actualizado');
+    toast.success('Caso de prueba editado correctamente', {
+      style: {
+        background: '#22c55e',
+        color: 'white',
+        fontSize: '16px',
+        padding: '12px 16px'
+      }
+    });
   };
 
   const handleCancelUpdate = () => {
     setShowConfirmDialog(false);
-    // Opcional: redirigir a la lista de casos de prueba
-    // navigate('/test-case-management');
+    setEditingTestCase(null);
   };
 
   const handleDeleteTestCase = () => {
@@ -179,6 +219,25 @@ const TestCaseManagement = () => {
     setTestCases(testCases.filter(tc => tc.id !== testCaseToDelete.id));
     setTestCaseToDelete(null);
     toast.success('Caso de prueba eliminado');
+  };
+
+  const getPriorityExplanation = (priority: string) => {
+    switch(priority) {
+      case 'Alta': return 'Este test es crítico y debe ejecutarse primero.';
+      case 'Media': return 'Este test es importante pero no crítico.';
+      case 'Baja': return 'Este test puede ejecutarse al final del ciclo.';
+      default: return '';
+    }
+  };
+
+  const getTypeExplanation = (type: string) => {
+    switch(type) {
+      case 'Funcional': return 'Valida una funcionalidad clave del sistema.';
+      case 'Rendimiento': return 'Evalúa la velocidad y eficiencia del sistema.';
+      case 'Seguridad': return 'Verifica aspectos de seguridad y protección de datos.';
+      case 'UI': return 'Prueba la interfaz de usuario y experiencia del usuario.';
+      default: return 'Tipo de prueba específico del proyecto.';
+    }
   };
 
   if (!activeProject) {
@@ -282,114 +341,15 @@ const TestCaseManagement = () => {
                       <TableCell>{testCase.type}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="flex items-center gap-1"
-                                onClick={() => setEditingTestCase({...testCase})}
-                              >
-                                <Edit className="h-4 w-4" />
-                                Editar
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-xl">
-                              <DialogHeader>
-                                <DialogTitle>Editar Caso de Prueba</DialogTitle>
-                                <DialogDescription>
-                                  Modifica los detalles del caso de prueba {testCase.id}
-                                </DialogDescription>
-                              </DialogHeader>
-                              {editingTestCase && (
-                                <div className="grid gap-4 py-4">
-                                  <div className="grid gap-2">
-                                    <Label htmlFor="tc-description">Descripción</Label>
-                                    <Textarea
-                                      id="tc-description"
-                                      value={editingTestCase.description}
-                                      onChange={(e) => setEditingTestCase({ ...editingTestCase, description: e.target.value })}
-                                    />
-                                  </div>
-                                  <div className="grid gap-2">
-                                    <Label htmlFor="tc-steps">Pasos</Label>
-                                    <Textarea
-                                      id="tc-steps"
-                                      value={editingTestCase.steps.join('\n')}
-                                      onChange={(e) => setEditingTestCase({ 
-                                        ...editingTestCase, 
-                                        steps: e.target.value.split('\n').filter(s => s.trim()) 
-                                      })}
-                                      rows={4}
-                                    />
-                                  </div>
-                                  <div className="grid gap-2">
-                                    <Label htmlFor="tc-expected">Resultado Esperado</Label>
-                                    <Textarea
-                                      id="tc-expected"
-                                      value={editingTestCase.expected}
-                                      onChange={(e) => setEditingTestCase({ ...editingTestCase, expected: e.target.value })}
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                      <Label htmlFor="tc-priority">Prioridad</Label>
-                                      <Select 
-                                        value={editingTestCase.priority}
-                                        onValueChange={(value) => setEditingTestCase({ ...editingTestCase, priority: value })}
-                                      >
-                                        <SelectTrigger id="tc-priority">
-                                          <SelectValue placeholder="Seleccionar prioridad" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="Alta">Alta</SelectItem>
-                                          <SelectItem value="Media">Media</SelectItem>
-                                          <SelectItem value="Baja">Baja</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="grid gap-2">
-                                      <Label htmlFor="tc-type">Tipo</Label>
-                                      <Select 
-                                        value={editingTestCase.type}
-                                        onValueChange={(value) => setEditingTestCase({ ...editingTestCase, type: value })}
-                                      >
-                                        <SelectTrigger id="tc-type">
-                                          <SelectValue placeholder="Seleccionar tipo" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="Funcional">Funcional</SelectItem>
-                                          <SelectItem value="Rendimiento">Rendimiento</SelectItem>
-                                          <SelectItem value="Seguridad">Seguridad</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                              <DialogFooter>
-                                <Button onClick={handleShowConfirmDialog}>Guardar Cambios</Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-
-                          <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>¿Estás seguro de que deseas editar el caso de prueba?</AlertDialogTitle>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={handleCancelUpdate} className="gap-2">
-                                  <X className="h-4 w-4" />
-                                  Cancelar
-                                </AlertDialogCancel>
-                                <AlertDialogAction onClick={handleConfirmUpdate} className="gap-2">
-                                  <Check className="h-4 w-4" />
-                                  Confirmar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex items-center gap-1"
+                            onClick={() => handleEditClick(testCase)}
+                          >
+                            <Edit className="h-4 w-4" />
+                            Editar
+                          </Button>
 
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -464,14 +424,16 @@ const TestCaseManagement = () => {
                                   <p className="mt-1 text-sm">{testCase.expected}</p>
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                   <div>
                                     <h4 className="text-sm font-medium">Prioridad</h4>
-                                    <p className="mt-1 text-sm">{testCase.priority}</p>
+                                    <p className="mt-1 text-sm font-medium">{testCase.priority}</p>
+                                    <p className="text-xs text-muted-foreground">{getPriorityExplanation(testCase.priority)}</p>
                                   </div>
                                   <div>
                                     <h4 className="text-sm font-medium">Tipo</h4>
-                                    <p className="mt-1 text-sm">{testCase.type}</p>
+                                    <p className="mt-1 text-sm font-medium">{testCase.type}</p>
+                                    <p className="text-xs text-muted-foreground">{getTypeExplanation(testCase.type)}</p>
                                   </div>
                                 </div>
                               </div>
@@ -495,6 +457,150 @@ const TestCaseManagement = () => {
           </Card>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Editar Caso de Prueba</DialogTitle>
+            <DialogDescription>
+              Modifica los detalles del caso de prueba {editingTestCase?.id}
+            </DialogDescription>
+          </DialogHeader>
+          {editingTestCase && (
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="tc-description">
+                  Descripción <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="tc-description"
+                  value={editingTestCase.description}
+                  onChange={(e) => {
+                    setEditingTestCase({ ...editingTestCase, description: e.target.value });
+                    if (formErrors.description) setFormErrors({ ...formErrors, description: '' });
+                  }}
+                  className={formErrors.description ? 'border-red-500' : ''}
+                />
+                {formErrors.description && (
+                  <p className="text-sm text-red-500">{formErrors.description}</p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tc-steps">
+                  Pasos <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="tc-steps"
+                  value={editingTestCase.steps.join('\n')}
+                  onChange={(e) => {
+                    setEditingTestCase({ 
+                      ...editingTestCase, 
+                      steps: e.target.value.split('\n').filter(s => s.trim()) 
+                    });
+                    if (formErrors.steps) setFormErrors({ ...formErrors, steps: '' });
+                  }}
+                  rows={4}
+                  className={formErrors.steps ? 'border-red-500' : ''}
+                />
+                {formErrors.steps && (
+                  <p className="text-sm text-red-500">{formErrors.steps}</p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tc-expected">
+                  Resultado Esperado <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="tc-expected"
+                  value={editingTestCase.expected}
+                  onChange={(e) => {
+                    setEditingTestCase({ ...editingTestCase, expected: e.target.value });
+                    if (formErrors.expected) setFormErrors({ ...formErrors, expected: '' });
+                  }}
+                  className={formErrors.expected ? 'border-red-500' : ''}
+                />
+                {formErrors.expected && (
+                  <p className="text-sm text-red-500">{formErrors.expected}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="tc-priority">
+                    Prioridad <span className="text-red-500">*</span>
+                  </Label>
+                  <Select 
+                    value={editingTestCase.priority}
+                    onValueChange={(value) => {
+                      setEditingTestCase({ ...editingTestCase, priority: value });
+                      if (formErrors.priority) setFormErrors({ ...formErrors, priority: '' });
+                    }}
+                  >
+                    <SelectTrigger id="tc-priority" className={formErrors.priority ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Seleccionar prioridad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Alta">Alta</SelectItem>
+                      <SelectItem value="Media">Media</SelectItem>
+                      <SelectItem value="Baja">Baja</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formErrors.priority && (
+                    <p className="text-sm text-red-500">{formErrors.priority}</p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tc-type">
+                    Tipo <span className="text-red-500">*</span>
+                  </Label>
+                  <Select 
+                    value={editingTestCase.type}
+                    onValueChange={(value) => {
+                      setEditingTestCase({ ...editingTestCase, type: value });
+                      if (formErrors.type) setFormErrors({ ...formErrors, type: '' });
+                    }}
+                  >
+                    <SelectTrigger id="tc-type" className={formErrors.type ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Funcional">Funcional</SelectItem>
+                      <SelectItem value="Rendimiento">Rendimiento</SelectItem>
+                      <SelectItem value="Seguridad">Seguridad</SelectItem>
+                      <SelectItem value="UI">UI</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formErrors.type && (
+                    <p className="text-sm text-red-500">{formErrors.type}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={handleShowConfirmDialog}>Guardar Cambios</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está seguro que desea editar este caso de prueba?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelUpdate} className="gap-2">
+              <X className="h-4 w-4" />
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpdate} className="gap-2">
+              <Check className="h-4 w-4" />
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { validateProjectName, validateDescription } from '@/utils/errorSimulation';
 
 interface ProjectFormDialogProps {
   open: boolean;
@@ -31,48 +32,68 @@ const ProjectFormDialog = ({
     name: project?.name || '',
     description: project?.description || '',
   });
-  const [nameError, setNameError] = useState('');
+  const [errors, setErrors] = useState({
+    name: '',
+    description: ''
+  });
 
-  const validateName = (name: string) => {
-    if (mode === 'create' && existingNames.includes(name.trim())) {
-      setNameError('Ese nombre ya existe');
-      return false;
+  const validateForm = () => {
+    const nameError = validateProjectName(formData.name);
+    let duplicateError = null;
+    
+    // Check for duplicate names
+    if (mode === 'create' && existingNames.includes(formData.name.trim())) {
+      duplicateError = 'Ese nombre ya existe';
     }
-    if (mode === 'edit' && existingNames.includes(name.trim()) && name.trim() !== project?.name) {
-      setNameError('Ese nombre ya existe');
-      return false;
+    if (mode === 'edit' && existingNames.includes(formData.name.trim()) && formData.name.trim() !== project?.name) {
+      duplicateError = 'Ese nombre ya existe';
     }
-    setNameError('');
-    return true;
+    
+    const descriptionError = validateDescription(formData.description);
+    
+    const newErrors = {
+      name: duplicateError || nameError || '',
+      description: descriptionError || ''
+    };
+    
+    setErrors(newErrors);
+    return !newErrors.name && !newErrors.description;
   };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
     setFormData({ ...formData, name: newName });
-    if (nameError) {
-      validateName(newName);
+    
+    // Clear error when user starts typing
+    if (errors.name) {
+      setErrors({ ...errors, name: '' });
+    }
+  };
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newDescription = e.target.value;
+    setFormData({ ...formData, description: newDescription });
+    
+    // Clear error when user starts typing
+    if (errors.description) {
+      setErrors({ ...errors, description: '' });
     }
   };
 
   const handleSubmit = () => {
-    if (!validateName(formData.name)) {
-      return;
-    }
-    
-    if (!formData.name.trim()) {
-      setNameError('El nombre es requerido');
+    if (!validateForm()) {
       return;
     }
 
     onSubmit(formData);
     setFormData({ name: '', description: '' });
-    setNameError('');
+    setErrors({ name: '', description: '' });
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setFormData({ name: '', description: '' });
-      setNameError('');
+      setErrors({ name: '', description: '' });
     }
     onOpenChange(newOpen);
   };
@@ -102,32 +123,40 @@ const ProjectFormDialog = ({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Nombre</Label>
+            <Label htmlFor="name">
+              Nombre <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="name"
               placeholder="Nombre del proyecto"
               value={formData.name}
               onChange={handleNameChange}
-              className={nameError ? 'border-red-500' : ''}
+              className={errors.name ? 'border-red-500' : ''}
             />
-            {nameError && (
-              <p className="text-sm text-red-500">{nameError}</p>
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name}</p>
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="description">Descripción</Label>
+            <Label htmlFor="description">
+              Descripción <span className="text-red-500">*</span>
+            </Label>
             <Textarea
               id="description"
               placeholder="Descripción del proyecto"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={handleDescriptionChange}
+              className={errors.description ? 'border-red-500' : ''}
             />
+            {errors.description && (
+              <p className="text-sm text-red-500">{errors.description}</p>
+            )}
           </div>
         </div>
         <DialogFooter>
           <Button 
             onClick={handleSubmit}
-            disabled={!!nameError || !formData.name.trim()}
+            disabled={!formData.name.trim() || !formData.description.trim()}
           >
             {mode === 'create' ? 'Crear Proyecto' : 'Guardar Cambios'}
           </Button>
