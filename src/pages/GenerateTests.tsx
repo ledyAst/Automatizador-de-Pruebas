@@ -215,8 +215,6 @@ const GenerateTests = () => {
               <Button 
                 onClick={exportTestCases} 
                 variant="outline" 
-                className="flex items-center gap-2"
-                disabled={testCases.length === 0}
               >
                 <Download className="h-4 w-4" />
                 Exportar

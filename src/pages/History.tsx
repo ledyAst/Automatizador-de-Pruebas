@@ -113,7 +113,7 @@ const History = () => {
   const handleExport = (format: 'pdf' | 'excel') => {
     // Validate that there is data to export
     if (filteredHistory.length === 0) {
-      toast.error("No hay datos disponibles para exportar. Aplica filtros diferentes o verifica que existan interacciones en este proyecto.", {
+      toast.error("No hay datos disponibles para exportar", {
         className: '!bg-red-50 !border-red-200 !text-red-600',
       });
       return;
@@ -195,7 +195,6 @@ const History = () => {
             <Button 
               variant="outline" 
               onClick={() => handleExport('pdf')} 
-              disabled={filteredHistory.length === 0}
               className="flex items-center gap-2"
             >
               <FileText className="h-4 w-4" />
@@ -204,7 +203,6 @@ const History = () => {
             <Button 
               variant="outline" 
               onClick={() => handleExport('excel')} 
-              disabled={filteredHistory.length === 0}
               className="flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
