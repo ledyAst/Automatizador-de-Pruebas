@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ExecuteTests from "./pages/ExecuteTests";
 import History from "./pages/History";
+import GenerateTests from "./pages/GenerateTests";
 import AppSidebar from "./components/AppSidebar";
 import ProjectManagement from "./pages/ProjectManagement";
 import ApiManagement from "./pages/ApiManagement";
@@ -38,6 +39,7 @@ const App = () => (
                     <Route path="/" element={<Index />} />
                     <Route path="/execute-tests" element={<ExecuteTests />} />
                     <Route path="/history" element={<History />} />
+                    <Route path="/generate-tests" element={<GenerateTests />} />
                     <Route path="/project-management" element={<ProjectManagement />} />
                     <Route path="/api-management" element={<ApiManagement />} />
                     <Route path="/test-case-management" element={<TestCaseManagement />} />

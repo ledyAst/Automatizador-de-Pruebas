@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Download, Calendar } from 'lucide-react';
@@ -110,8 +109,16 @@ const History = () => {
     return date.toLocaleString();
   };
 
-  // Function to handle the export action
+  // Function to handle the export action with validation
   const handleExport = (format: 'pdf' | 'excel') => {
+    // Validate that there is data to export
+    if (filteredHistory.length === 0) {
+      toast.error("No hay datos disponibles para exportar. Aplica filtros diferentes o verifica que existan interacciones en este proyecto.", {
+        className: '!bg-red-50 !border-red-200 !text-red-600',
+      });
+      return;
+    }
+
     toast.success(`Historial exportado en formato ${format.toUpperCase()}`);
   };
 
@@ -185,11 +192,21 @@ const History = () => {
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => handleExport('pdf')} className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => handleExport('pdf')} 
+              disabled={filteredHistory.length === 0}
+              className="flex items-center gap-2"
+            >
               <FileText className="h-4 w-4" />
               Exportar PDF
             </Button>
-            <Button variant="outline" onClick={() => handleExport('excel')} className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => handleExport('excel')} 
+              disabled={filteredHistory.length === 0}
+              className="flex items-center gap-2"
+            >
               <Download className="h-4 w-4" />
               Exportar Excel
             </Button>

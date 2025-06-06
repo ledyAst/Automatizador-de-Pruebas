@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -190,8 +189,18 @@ const ExecuteTests = () => {
     runNextTest();
   };
 
-  // Updated function to download test results with proper error simulation and file naming
+  // Updated function to download test results with proper validation
   const downloadResults = () => {
+    // Validate that there are executed tests to download
+    const executedTests = testCases.filter(test => test.status !== 'pending');
+    
+    if (executedTests.length === 0) {
+      toast.error("No hay datos disponibles para exportar. Ejecuta al menos una prueba antes de descargar los resultados.", {
+        className: '!bg-red-50 !border-red-200 !text-red-600',
+      });
+      return;
+    }
+
     const { hasError, errorMessage } = simulateDownloadError();
     
     if (hasError) {
@@ -217,7 +226,6 @@ const ExecuteTests = () => {
     // Simulate download process
     setTimeout(() => {
       // Create a simple CSV content (simulating Excel export)
-      const executedTests = testCases.filter(test => test.status !== 'pending');
       let csvContent = "ID,Descripción,Estado,Resultado,Proyecto\n";
       
       executedTests.forEach(test => {

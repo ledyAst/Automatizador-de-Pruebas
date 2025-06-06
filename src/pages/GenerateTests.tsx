@@ -117,8 +117,16 @@ const GenerateTests = () => {
     }, 2000);
   };
 
-  // Function to export test cases as JSON
+  // Function to export test cases as JSON with validation
   const exportTestCases = () => {
+    // Validate that there are test cases to export
+    if (testCases.length === 0) {
+      toast.error("No hay datos disponibles para exportar", {
+        className: '!bg-red-50 !border-red-200 !text-red-600',
+      });
+      return;
+    }
+
     const dataStr = JSON.stringify(testCases, null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
     
@@ -204,7 +212,12 @@ const GenerateTests = () => {
                   {testCases.length} casos de prueba generados a partir de la descripción funcional.
                 </CardDescription>
               </div>
-              <Button onClick={exportTestCases} variant="outline" className="flex items-center gap-2">
+              <Button 
+                onClick={exportTestCases} 
+                variant="outline" 
+                className="flex items-center gap-2"
+                disabled={testCases.length === 0}
+              >
                 <Download className="h-4 w-4" />
                 Exportar
               </Button>
